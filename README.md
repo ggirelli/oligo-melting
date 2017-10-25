@@ -1,4 +1,4 @@
-oligo-melting-temperature
+oligo-melting
 ===
 
 The `oligomelt.py` script, implemented in Python, allows to calculate the melting temperature of a nucleic acid duplex, provided the sequence of one of the two strands.
