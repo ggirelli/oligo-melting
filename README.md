@@ -76,11 +76,11 @@ optional arguments:
 
 ### References
 
-[^1]: Freier et al, PNAS(83), 1986;
-[^2]: Sugimoto et al, Biochemistry(34), 1995.
-[^3]: Allawi & Santalucia, Biochemistry(36), 1997;
-[^4]: SantaLucia, PNAS(95), 1998;
-[^5]: Owczarzy et al, Biochemistry(43), 2004;
-[^6]: Owczarzy et al, Biochemistry(47), 2008;
-[^7]: McConaughy et al, Biochemistry(8), 1969;
-[^8]: Wright et al, Appl. env. microbiol.(80), 2014.
+* [^1]: Freier et al, PNAS(83), 1986;
+* [^2]: Sugimoto et al, Biochemistry(34), 1995.
+* [^3]: Allawi & Santalucia, Biochemistry(36), 1997;
+* [^4]: SantaLucia, PNAS(95), 1998;
+* [^5]: Owczarzy et al, Biochemistry(43), 2004;
+* [^6]: Owczarzy et al, Biochemistry(47), 2008;
+* [^7]: McConaughy et al, Biochemistry(8), 1969;
+* [^8]: Wright et al, Appl. env. microbiol.(80), 2014.
