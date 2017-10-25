@@ -84,3 +84,7 @@ optional arguments:
 * [^6]: Owczarzy et al, Biochemistry(47), 2008;
 * [^7]: McConaughy et al, Biochemistry(8), 1969;
 * [^8]: Wright et al, Appl. env. microbiol.(80), 2014.
+
+---
+
+<small>This project comes from the [potpourri](https://github.com/ggirelli/potpourri) sandbox.</small>
