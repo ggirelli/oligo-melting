@@ -8,7 +8,8 @@
 # Description: functions to calculate and correct melting temperature.
 # 
 # Changelog:
-#  unreleased: fixed melting curves (inverted).
+#  unrelease: ...
+#  1.0.1: fixed melting curves (inverted).
 #  1.0.0: functions retrieved from original script.
 # 
 # References:
