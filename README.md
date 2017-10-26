@@ -74,6 +74,14 @@ optional arguments:
   -v, --verbose         Verbose output.
 ```
 
+### Library
+
+The `oligomeltlib.py` function library (available in `/lib/`) contains all the functions necessary to calculate and/or correct a duplex melting temperature based on a number of parameters.
+
+### Additional scripts
+
+* `plot_melt_curves.R` to plot single oligo melting curves. Implemented in `R`, requires the `ggplot2` and `argparser` packages to run.
+
 ### References
 
 * [^1]: Freier et al, PNAS(83), 1986;
