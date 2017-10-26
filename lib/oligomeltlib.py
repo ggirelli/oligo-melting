@@ -8,7 +8,7 @@
 # Description: functions to calculate and correct melting temperature.
 # 
 # Changelog:
-#  1.0.1: fixed melting curves (inverted).
+#  unreleased: fixed melting curves (inverted).
 #  1.0.0: functions retrieved from original script.
 # 
 # References:
@@ -368,7 +368,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
                 factor = math.exp(-dg / (R * t)) * oligo_conc
 
             # Calculate fraction
-            k = (1 + factor) / factor
+            k = 1 - factor (1 + factor)
 
             # Adjust output temperature
             t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
@@ -386,7 +386,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
                 factor = math.exp(-dg / (R * t)) * oligo_conc
 
             # Calculate fraction
-            k = (1 + factor) / factor
+            k = 1 - factor (1 + factor)
 
             # Adjust output temperature
             t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
