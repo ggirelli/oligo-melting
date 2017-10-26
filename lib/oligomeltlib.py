@@ -368,7 +368,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
                 factor = math.exp(-dg / (R * t)) * oligo_conc
 
             # Calculate fraction
-            k = 1 - factor (1 + factor)
+            k = 1 - factor / (1 + factor)
 
             # Adjust output temperature
             t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
@@ -386,7 +386,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
                 factor = math.exp(-dg / (R * t)) * oligo_conc
 
             # Calculate fraction
-            k = 1 - factor (1 + factor)
+            k = 1 - factor / (1 + factor)
 
             # Adjust output temperature
             t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
