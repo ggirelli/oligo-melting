@@ -202,8 +202,8 @@ def rc(na, t):
 
     return(rc)
 
-def ssMelt_fa_adj(tm, fa_conc):
-    # Adjustsecondary structure melting temperature based on formamide
+def ssMelt_fa_adj(tm, fa_conc, fa_conc_0 = None):
+    # Adjust secondary structure melting temperature based on formamide
     # concentration. Method adapted to work with OligoArrayAux output.
     # Based on McConaughy, Biochemistry(8), 1969
     # Method based on Wright et al not implemented, as m-value is not available.
@@ -212,16 +212,26 @@ def ssMelt_fa_adj(tm, fa_conc):
     #   tm (float): melting temperature, in K.
     #   fa_conc (float): formamide concentration in %v,v.
     #   fa_mode (string): formamide correction lavel.
+    #   fa_conc_0 (float): initial formamide concentration in %v,v.
     # 
     # Returns:
     #   float: corrected melting temperature.
     
-    if 0 == fa_conc:
+    # Default initial concentration
+    if type(None) == type(fa_conc_0):
+        fa_conc_0 = 0
+
+    # Delta FA concentration
+    dfac = fa_conc - fa_conc_0
+
+    # Correct
+    if 0 == dfac:
         return(tm)
     else:
-        return(tm - 0.72 * fa_conc)
+        return(tm - 0.72 * dfac)
 
-def duMelt_fa_adj(tm, h, s, seq, oligo_conc, fa_conc, fa_mode, mvalue, tt_mode):
+def duMelt_fa_adj(tm, h, s, seq, oligo_conc,
+    fa_conc, fa_mode, mvalue, tt_mode, fa_conc_0 = None):
     # Adjust melting temperature of a duplex based on formamide concentration.
     # Based on Wright, Appl. env. microbiol.(80), 2014
     # Or on McConaughy, Biochemistry(8), 1969
@@ -236,26 +246,37 @@ def duMelt_fa_adj(tm, h, s, seq, oligo_conc, fa_conc, fa_mode, mvalue, tt_mode):
     #   fa_mode (string): formamide correction lavel.
     #   mvalue (lambda): formamide m-value function.
     #   tt_mode (string): thermodynamic table label.
+    #   fa_conc_0 (float): initial formamide concentration in %v,v.
     # 
     # Returns:
     #   float: corrected melting temperature.
     
-    if 0 == fa_conc:
+    # Default initial formamide concentration
+    if type(None) == type(fa_conc_0):
+        fa_conc_0 = 0
+
+    # Delta formamide concentration
+    dfac = fa_conc - fa_conc_0
+
+    # If no change
+    if 0 == dfac:
         return(tm)
     
+    # Apply linear to melting temperature
     if "mcconaughy" == fa_mode:
-        tm -= 0.72 * fa_conc
+        tm -= 0.72 * dfac
 
+    # Apply to free energy
     if "wright" == fa_mode:
         m = mvalue(len(seq))
         if "sugimoto" in tt_mode:
-            tm = (h + m * fa_conc) / (R * math.log(oligo_conc / 4) + s)
+            tm = (h + m * dfac) / (R * math.log(oligo_conc / 4) + s)
         else:
-            tm = (h + m * fa_conc) / (R * math.log(oligo_conc) + s)
+            tm = (h + m * dfac) / (R * math.log(oligo_conc) + s)
 
     return(tm)
 
-def duMelt_na_adj(tm, na_conc, fgc):
+def duMelt_na_adj(tm, na_conc, fgc, na_conc_0 = None):
     # Adjust melting temperature of a duplexx based on sodium concentration.
     # Based on Owczarzy et al, Biochemistry(43), 2004
     # 
@@ -268,7 +289,8 @@ def duMelt_na_adj(tm, na_conc, fgc):
     #   float: adjusted melting temperature.
     
     # Default
-    na_conc_0 = 1.
+    if type(None) is type(na_conc_0):
+        na_conc_0 = 1.
     Tm2 = tm
 
     # Parameters from paper
@@ -303,7 +325,7 @@ def duMelt_mg_adj(tm, mg_conc, fgc):
     # Parameters from paper
     mg_a = 3.92e-5
     mg_b = -9.11e-6
-    mg_c = 6.26e-5
+    mg_c = 6.26e-5 
     mg_d = 1.42e-5
     mg_e = -4.82e-4
     mg_f = 5.25e-4
