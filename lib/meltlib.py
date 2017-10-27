@@ -371,7 +371,7 @@ def duMelt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
 
     # Explore the temperature range
     t = tm - trange / 2.
-    while t <= tm + trange / 2.:
+    while t < tm + trange / 2.:
         if "mcconaughy" == fa_mode:
             # Calculate dissociated fraction
             k = duDissoc_fraction(h, t, s, oligo_conc, tt_mode, 0)
@@ -417,7 +417,7 @@ def ssMelt_curve(h, s, tm, fa_conc, trange, tstep):
 
     # Explore the temperature range
     t = tm - trange / 2.
-    while t <= tm + trange / 2.:
+    while t < tm + trange / 2.:
         # Calculate dissociated fraction
         k = ssUnfolded_fraction(h, t, s)
 
