@@ -2,15 +2,10 @@
 # 
 # Author: Gabriele Girelli
 # Email: gigi.ga90@gmail.com
-# Version: 1.0.1
+# Version: 1.4.4
 # Date: 20171026
 # Project: oligo characterization
 # Description: functions to calculate and correct melting temperature.
-# 
-# Changelog:
-#  unrelease: ...
-#  1.0.1: fixed melting curves (inverted).
-#  1.0.0: functions retrieved from original script.
 # 
 # References:
 #  [1] Freier et al, PNAS(83), 1986;
@@ -207,8 +202,27 @@ def rc(na, t):
 
     return(rc)
 
-def melt_fa_adj(tm, h, s, seq, oligo_conc, fa_conc, fa_mode, mvalue, tt_mode):
-    # Adjust melting temperature based on formamide concentration.
+def ssMelt_fa_adj(tm, fa_conc):
+    # Adjustsecondary structure melting temperature based on formamide
+    # concentration. Method adapted to work with OligoArrayAux output.
+    # Based on McConaughy, Biochemistry(8), 1969
+    # Method based on Wright et al not implemented, as m-value is not available.
+    # 
+    # Args:
+    #   tm (float): melting temperature, in K.
+    #   fa_conc (float): formamide concentration in %v,v.
+    #   fa_mode (string): formamide correction lavel.
+    # 
+    # Returns:
+    #   float: corrected melting temperature.
+    
+    if 0 == fa_conc:
+        return(tm)
+    else:
+        return(tm - 0.72 * fa_conc)
+
+def duMelt_fa_adj(tm, h, s, seq, oligo_conc, fa_conc, fa_mode, mvalue, tt_mode):
+    # Adjust melting temperature of a duplex based on formamide concentration.
     # Based on Wright, Appl. env. microbiol.(80), 2014
     # Or on McConaughy, Biochemistry(8), 1969
     # 
@@ -241,8 +255,8 @@ def melt_fa_adj(tm, h, s, seq, oligo_conc, fa_conc, fa_mode, mvalue, tt_mode):
 
     return(tm)
 
-def melt_na_adj(tm, na_conc, fgc):
-    # Adjust melting temperature based on sodium concentration.
+def duMelt_na_adj(tm, na_conc, fgc):
+    # Adjust melting temperature of a duplexx based on sodium concentration.
     # Based on Owczarzy et al, Biochemistry(43), 2004
     # 
     # Args:
@@ -271,8 +285,8 @@ def melt_na_adj(tm, na_conc, fgc):
 
     return(Tm2)
 
-def melt_mg_adj(tm, mg_conc, fgc):
-    # Adjust melting temperature based on sodium concentration.
+def duMelt_mg_adj(tm, mg_conc, fgc):
+    # Adjust melting temperature a duplexx based on sodium concentration.
     # Based on Owczarzy et al, Biochemistry(47), 2008
     # 
     # Args:
@@ -306,8 +320,8 @@ def melt_mg_adj(tm, mg_conc, fgc):
 
     return(Tm3)
 
-def melt_ion_adj(tm, na_conc, mg_conc, fgc):
-    # Adjust melting temperature based on ion concentration
+def duMelt_ion_adj(tm, na_conc, mg_conc, fgc):
+    # Adjust melting temperature a duplexx based on ion concentration
     # 
     # Args:
     #   tm (float): melting temperature.
@@ -318,13 +332,13 @@ def melt_ion_adj(tm, na_conc, mg_conc, fgc):
     # Returns:
     #   float: adjusted melting temperature.
     if 0 != mg_conc:
-        return(melt_mg_adj(tm, mg_conc, fgc))
+        return(duMelt_mg_adj(tm, mg_conc, fgc))
     elif 0 != na_conc:
-        return(melt_na_adj(tm, na_conc, fgc))
+        return(duMelt_na_adj(tm, na_conc, fgc))
     else:
         return(tm)
 
-def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
+def duMelt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
     fgc, h, s, tm, trange, tstep, tt_mode):
     # Generate melting curve
     # 
@@ -352,7 +366,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
 
     # Adjust melting temperature
     if "wright" == fa_mode:
-        tm = melt_fa_adj(tm, h, s, seq, oligo_conc,
+        tm = duMelt_fa_adj(tm, h, s, seq, oligo_conc,
         	fa_conc, fa_mode, mvalue, tt_mode)
 
     # Explore the temperature range
@@ -372,8 +386,8 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
             k = 1 - factor / (1 + factor)
 
             # Adjust output temperature
-            t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
-            t_out = melt_fa_adj(t_out, h, s, seq, oligo_conc,
+            t_out = duMelt_ion_adj(t, na_conc, mg_conc, fgc)
+            t_out = duMelt_fa_adj(t_out, h, s, seq, oligo_conc,
             	fa_conc, fa_mode, mvalue, tt_mode)
 
         if "wright" == fa_mode:
@@ -390,7 +404,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
             k = 1 - factor / (1 + factor)
 
             # Adjust output temperature
-            t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
+            t_out = duMelt_ion_adj(t, na_conc, mg_conc, fgc)
 
         # Append melting data
         data.append((t_out, k))
@@ -401,9 +415,47 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
     # Return melting table
     return(data)
 
-def melt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
-    # Calculate melting temperature at standard 1 M NaCl (monovalent ions conc)
-    # Based on SantaLucia, PNAS(95), 1998
+def ssMelt_curve(h, s, tm, fa_conc, trange, tstep):
+    # Generate melting curve
+    # 
+    # Args:
+    #   tm (float): melting temperature.
+    #   fa_conc (float): formamide concentration in %v,v.
+    #   trange (float): melting curve temperature range.
+    #   tstep (float): melting curve temperature step.
+    #   
+    # Returns:
+    #   list: melting curve data (x, y)
+
+    # Empty list for melting table
+    data = []
+
+    # Explore the temperature range
+    t = tm - trange / 2.
+    while t <= tm + trange / 2.:
+        dg = h - t * s
+
+        # Calculate factor
+        factor = math.exp(-dg / (R * t))
+
+        # Calculate fraction
+        k = 1 / (1 + factor)
+
+        # Adjust output temperature
+        t_out = ssMelt_fa_adj(t, fa_conc)
+
+        # Append melting data
+        data.append((t_out, k))
+
+        # Go to next temperature
+        t += tstep
+
+    # Return melting table
+    return(data)
+
+def duMelt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
+    # Calculate melting temperature of a duplex at standard 1 M NaCl (monovalent
+    # ions conc). Based on SantaLucia, PNAS(95), 1998
     # 
     # Args:
     #   seq (string): oligonucleotide sequence.
@@ -456,11 +508,11 @@ def melt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
     # Output
     return((h, s, tm))
 
-def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
+def duMelt_calc(name, seq, oligo_conc, na_conc, mg_conc,
 	fa_conc, fa_mode, fa_mval_s, mvalue,
     tt, tt_mode, celsius, is_verbose,
     do_curve, curve_step, curve_range, curve_outpath):
-    # Calculate melting temperature of provided oligo sequence.
+    # Calculate melting temperature of provided oligo duplex sequence.
     # 
     # Args:
     #   seq (string): oligonucleotide sequence.
@@ -507,25 +559,25 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     # 1 M NaCl case
     # Based on SantaLucia, PNAS(95), 1998
     # -----------------------------------
-    (h, s, Tm1) = melt_std_calc(seq, tt, tt_mode, couples, oligo_conc)
+    (h, s, Tm1) = duMelt_std_calc(seq, tt, tt_mode, couples, oligo_conc)
 
     # Adjust for FA
     # Based on Wright, Appl. env. microbiol.(80), 2014
     # Or on McConaughy, Biochemistry(8), 1969
     # ------------------------------------------------
-    Tm2 = melt_fa_adj(Tm1, h, s, seq, oligo_conc,
+    Tm2 = duMelt_fa_adj(Tm1, h, s, seq, oligo_conc,
     	fa_conc, fa_mode, mvalue, tt_mode)
 
     # Adjusted for [Na]
     # Based on Owczarzy et al, Biochemistry(43), 2004
     # -----------------------------------------------
-    Tm3 = melt_na_adj(Tm2, na_conc, fgc)
+    Tm3 = duMelt_na_adj(Tm2, na_conc, fgc)
 
     # Adjusted for Mg
     # Based on Owczarzy et al, Biochemistry(47), 2008
     # -----------------------------------------------
     if 0 < mg_conc:
-        Tm4 = melt_mg_adj(Tm2, mg_conc, fgc)
+        Tm4 = duMelt_mg_adj(Tm2, mg_conc, fgc)
     else:
         Tm4 = Tm3
 
@@ -534,7 +586,7 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     
     if do_curve:
         fout = open(curve_outpath, 'a+')
-        tab = melt_curve(seq, oligo_conc, na_conc, mg_conc,
+        tab = duMelt_curve(seq, oligo_conc, na_conc, mg_conc,
         	fa_conc, fa_mode, mvalue, fgc, h, s, Tm1,
         	curve_range, curve_step, tt_mode)
         for (t, k) in tab:

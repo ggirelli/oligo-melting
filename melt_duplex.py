@@ -5,21 +5,10 @@
 # 
 # Author: Gabriele Girelli
 # Email: gigi.ga90@gmail.com
-# Version: 1.4.3
+# Version: 1.4.4
 # Date: 20170711
 # Project: oligo characterization
 # Description:  calculate melting temperature of a provide NA duplex
-# 
-# Changelog:
-#  1.4.3: fixed melting curves (inverted).
-#  1.4.2: changed to user-defined formamide m-value for wright correction.
-#  1.4.0: added formamide correction.
-#  1.3.0: added temperature curve calculation. Proper fasta input.
-#  1.2.2: fixed allawi and freier tables.
-#  1.2.1: fixed sugimotod table.
-#  1.2.0: DNA/RNA and RNA/DNA duplex calculation.
-#  1.1.0: input file mode. Fixed Mg2+ correction.
-#  1.0.0: first implementation.
 # 
 # References:
 #  [1] Freier et al, PNAS(83), 1986;
@@ -42,14 +31,14 @@ import os
 import re
 import sys
 
-from lib.oligomeltlib import *
+from lib.meltlib import *
 
 # PARAMETERS ===================================================================
 
 # Add script description
 parser = argparse.ArgumentParser(
     description = '''
-Calculate melting temeprature of a DNA duplex at provided [oligo],
+Calculate melting temperature of a DNA duplex at provided [oligo],
 [Na+], [Mg2+]. Either provide an oligo sequence or a file with one oligo
 per line (and use -F option). References:
  [1] Freier et al, PNAS(83), 1986;
@@ -236,7 +225,7 @@ if not use_file:
     # Single sequence case
     data['name'] = 'seq'
     data['seq'] = seq
-    melt_calc(**data)
+    duMelt_calc(**data)
 else:
     # Empty sequence dictionary
     fastad = {}
@@ -257,7 +246,7 @@ else:
     for (name, seq) in fastad.items():
         data['name'] = name
         data['seq'] = seq
-        melt_calc(**data)
+        duMelt_calc(**data)
 
 # END ==========================================================================
 

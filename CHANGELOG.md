@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [unreleased]
 
+## [1.4.4]
+### Changed
+- Renamed `oligomeltlib.py` to `meltlib.py`.
+- Renamed `oligomelt.py` to `melt_duplex.py`.
+
+### Added
+- `melt_second.py` to perform formamide correction and melting curve calculation for secondary structures predicted with OligoArrayAux.
+
 ## [1.4.3]
 ### Added
 - Melting curve plotting script (from fish-conditions repo).
@@ -50,6 +58,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.0.0]
 
 * [unreleased] https://github.com/ggirelli/oligo-melting
+* [1.4.4] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.4
 * [1.4.3] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.3
 * [1.4.2] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.2
 * [1.4.0] https://github.com/ggirelli/oligo-melting
