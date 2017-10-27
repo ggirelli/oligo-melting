@@ -373,17 +373,8 @@ def duMelt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
     t = tm - trange / 2.
     while t <= tm + trange / 2.:
         if "mcconaughy" == fa_mode:
-            # Calculate free energy
-            dg = h - t * s
-
-            # Calculate factor
-            if "sugimoto" in tt_mode:
-                factor = math.exp(-dg / (R * t)) * (oligo_conc / 4)
-            else:
-                factor = math.exp(-dg / (R * t)) * oligo_conc
-
-            # Calculate fraction
-            k = 1 - factor / (1 + factor)
+            # Calculate dissociated fraction
+            k = duDissoc_fraction(h, t, s, oligo_conc, tt_mode, 0)
 
             # Adjust output temperature
             t_out = duMelt_ion_adj(t, na_conc, mg_conc, fgc)
@@ -391,17 +382,11 @@ def duMelt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
             	fa_conc, fa_mode, mvalue, tt_mode)
 
         if "wright" == fa_mode:
-            # Calculate free energy
-            dg = h - t * s + m * fa_conc
+            # Calculate current FA m-value
+            m = mvalue(len(seq))
 
-            # Calculate factor
-            if "sugimoto" in tt_mode:
-                factor = math.exp(-dg / (R * t)) * (oligo_conc / 4)
-            else:
-                factor = math.exp(-dg / (R * t)) * oligo_conc
-
-            # Calculate fraction
-            k = 1 - factor / (1 + factor)
+            # Calculate dissociated fraction
+            k = duDissoc_fraction(h, t, s, oligo_conc, tt_mode, m * fa_conc)
 
             # Adjust output temperature
             t_out = duMelt_ion_adj(t, na_conc, mg_conc, fgc)
@@ -433,13 +418,8 @@ def ssMelt_curve(h, s, tm, fa_conc, trange, tstep):
     # Explore the temperature range
     t = tm - trange / 2.
     while t <= tm + trange / 2.:
-        dg = h - t * s
-
-        # Calculate factor
-        factor = math.exp(-dg / (R * t))
-
-        # Calculate fraction
-        k = 1 / (1 + factor)
+        # Calculate dissociated fraction
+        k = ssUnfolded_fraction(h, t, s)
 
         # Adjust output temperature
         t_out = ssMelt_fa_adj(t, fa_conc)
@@ -452,6 +432,58 @@ def ssMelt_curve(h, s, tm, fa_conc, trange, tstep):
 
     # Return melting table
     return(data)
+
+def duDissoc_fraction(h, t, s, oligo_conc, tt_mode, gplus):
+    # Calculate duplex dissociated fraction at given temperature.
+    # 
+    # Args:
+    #   h (float): enthalpy.
+    #   t (float): current temperature.
+    #   s (float): enthropy.
+    #   oligo_conc (float): oligo concentration in M.
+    #   tt_mode (string): N-N thermodynamic approach.
+    #   gplus (float): additional free energy by solvent denaturant.
+    # 
+    # Returns:
+    #   float: dissociated fraction.
+    
+    # Calculate free energy
+    dg = h - t * s + gplus
+
+    # Calculate factor
+    if "sugimoto" in tt_mode:
+        factor = math.exp(-dg / (R * t)) * (oligo_conc / 4)
+    else:
+        factor = math.exp(-dg / (R * t)) * oligo_conc
+
+    # Calculate fraction
+    k = 1 - factor / (1 + factor)
+
+    # Output
+    return(k)
+
+def ssUnfolded_fraction(h, t, s):
+    # Calculate secondary structure unfolded fraction
+    # 
+    # Args:
+    #   h (float): enthalpy.
+    #   t (float): current temperature.
+    #   s (float): enthropy.
+    # 
+    # Returns:
+    #   float: dissociated fraction.
+    
+    # Calculate free energy at current temperature
+    dg = h - t * s
+
+    # Calculate factor
+    factor = math.exp(-dg / (R * t))
+
+    # Calculate fraction
+    k = 1 / (1 + factor)
+
+    # Output
+    return(k)
 
 def duMelt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
     # Calculate melting temperature of a duplex at standard 1 M NaCl (monovalent
