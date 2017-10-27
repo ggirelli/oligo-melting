@@ -284,6 +284,7 @@ def duMelt_na_adj(tm, na_conc, fgc, na_conc_0 = None):
     #   tm (float): melting temperature at [Na] = 1 M.
     #   na_conc (float): monovalent species concentration in M.
     #   fgc (float): GC content fraction.
+    #   na_conc_0 (float): initial monovalent species concentration.
     #   
     # Returns:
     #   float: adjusted melting temperature.
@@ -342,7 +343,7 @@ def duMelt_mg_adj(tm, mg_conc, fgc):
 
     return(Tm3)
 
-def duMelt_ion_adj(tm, na_conc, mg_conc, fgc):
+def duMelt_ion_adj(tm, na_conc, mg_conc, fgc, na_conc_0 = None):
     # Adjust melting temperature a duplexx based on ion concentration
     # 
     # Args:
@@ -353,6 +354,10 @@ def duMelt_ion_adj(tm, na_conc, mg_conc, fgc):
     #   
     # Returns:
     #   float: adjusted melting temperature.
+    
+    if type(None) == type(na_conc_0):
+        na_conc_0 = 1.
+
     if 0 != mg_conc:
         return(duMelt_mg_adj(tm, mg_conc, fgc))
     elif 0 != na_conc:
