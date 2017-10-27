@@ -243,6 +243,8 @@ else:
                     fastad[curr_head] = row.strip()
 
     # Calculate for each fasta item
+    if not is_verbose:
+        print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
     for (name, seq) in fastad.items():
         data['name'] = name
         data['seq'] = seq

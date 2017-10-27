@@ -631,11 +631,11 @@ def duMelt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     # Log output
     # ----------
 
+    g = h - (37 + 273.15) * s
     if not is_verbose:
         if celsius:
-            print("%s\t%s\t%f" % (name, seq, Tm4 - 273.15))
-        else:
-            print("%s\t%s\t%f" % (name, seq, Tm4))
+            Tm4 -= 273.15
+        print("%s\t%f\t%f\t%f\t%f\t%s" % (name, g, h, s, Tm4, seq))
     else:
         print("""
              Oligo label : %s
@@ -671,7 +671,7 @@ def duMelt_calc(name, seq, oligo_conc, na_conc, mg_conc,
             oligo_conc, na_conc, mg_conc,
             fa_conc, fa_mode, fa_mval_s, tt_mode,
             do_curve, curve_range, curve_step, curve_outpath,
-            h, s, h - (37 + 273.15) * s,
+            h, s, g,
             Tm1, Tm1 - 273.15,
             fa_conc, Tm2, Tm2 - 273.15,
             na_conc, Tm3, Tm3 - 273.15,

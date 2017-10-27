@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [unreleased]
 ### Changed
 - Separated curve calculation and fraction calculation to different functions.
+- Harmonized `melt_X.py` scripts output.
 
 ### Added
 - `plot_melt_curves_coupled.R` for single-oligo coupled melting curve plot.
