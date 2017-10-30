@@ -411,9 +411,9 @@ def duMelt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
             k = duDissoc_fraction(h, t, s, oligo_conc, tt_mode, 0)
 
             # Adjust output temperature
-            t_out = duMelt_ion_adj(t, na_conc, mg_conc, fgc)
-            t_out = duMelt_fa_adj(t_out, h, s, seq, oligo_conc,
+            t_out = duMelt_fa_adj(t, h, s, seq, oligo_conc,
             	fa_conc, fa_mode, mvalue, tt_mode)
+            t_out = duMelt_ion_adj(t_out, na_conc, mg_conc, fgc)
 
         if "wright" == fa_mode:
             # Calculate current FA m-value
