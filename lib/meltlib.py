@@ -292,6 +292,8 @@ def duMelt_na_adj(tm, na_conc, fgc, na_conc_0 = None):
     # Default
     if type(None) is type(na_conc_0):
         na_conc_0 = 1.
+    if na_conc == na_conc_0:
+        return(tm)
     Tm2 = tm
 
     # Parameters from paper
@@ -300,7 +302,12 @@ def duMelt_na_adj(tm, na_conc, fgc, na_conc_0 = None):
     na_c = 9.4e-6
 
     # Adjust
-    if 0 < na_conc:
+    if 1 == na_conc:
+        Tm2r = (1. / tm)
+        Tm2r -= (na_a * fgc - na_b) * math.log(na_conc_0 / na_conc)
+        Tm2r -= na_c * (math.log(na_conc_0 / na_conc) ** 2)
+        Tm2 = 1. / Tm2r
+    elif 0 < na_conc:
         Tm2r = (1. / tm)
         Tm2r += (na_a * fgc - na_b) * math.log(na_conc / na_conc_0)
         Tm2r += na_c * (math.log(na_conc / na_conc_0) ** 2)
