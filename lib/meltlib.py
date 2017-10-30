@@ -359,7 +359,7 @@ def duMelt_ion_adj(tm, na_conc, mg_conc, fgc, na_conc_0 = None):
         na_conc_0 = 1.
 
     if 0 != mg_conc:
-        return(duMelt_mg_adj(tm, mg_conc, fgc))
+        return(duMelt_mg_adj(tm, mg_conc, fgc, na_conc_0))
     elif 0 != na_conc:
         return(duMelt_na_adj(tm, na_conc, fgc))
     else:
