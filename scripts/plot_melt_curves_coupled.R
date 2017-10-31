@@ -40,6 +40,9 @@ parser = add_argument(parser, arg = '--thybr', short = '-t', type = class(0.),
 	help = 'Hybridization temperature.', default = NA, nargs = 1)
 parser = add_argument(parser, arg = "--trange", type = class(0),
 	help = 'Temperature range for plot limits.', default = 40, nargs = 1)
+parser = add_argument(parser, arg = "--addit-tsv", type = class(""),
+	help = paste0('Path to additional input target tsv file. Three columns: ',
+	'oligo name, temperature and dissociated fraction.'), default = NA)
 
 # Parse arguments
 p = parse_args(parser)
@@ -55,6 +58,9 @@ xrange = c(thybr - trange / 2, thybr + trange / 2)
 # Read input
 t = read.delim(target_tsv, as.is = T, header = F)
 s = read.delim(second_tsv, as.is = T, header = F)
+if ( !is.na(addit_tsv) ) {
+	a = read.delim(addit_tsv, as.is = T, header = F)
+}
 
 # Point to pdf
 pdf(output_pdf, height = 10, width = 10)
@@ -66,19 +72,45 @@ for (name in unique(t$V1)) {
 	subs = s[do.call(rbind, strsplit(s$V1, ','))[,1] == name,]
 	subs$type = "secondary structure"
 
-	merged = rbind(subt, subs)
-
 	# Structure plot
-	p = ggplot(merged, aes(x = V2, y = V3, color = type))
-	p = p + geom_line()# + guides(color = F)
-	p = p + xlab("Temperature [degC]") + ylab("Dissociated/Unfolded fraction")
-	if ( !is.na(thybr) ) p = p + geom_vline(
-		aes(xintercept = thybr, color = "Thybrid"), linetype = 2)
-	p = p + geom_hline(aes(yintercept = 0.5,
-		color = "Melting point"), linetype = 2)
-	p = p + ggtitle(name) + xlim(xrange)
-	options(warn=-1); print(p); options(warn=0)
+	if ( is.na(addit_tsv) ) { # H1
 
+		merged = rbind(subt, subs)
+
+		p = ggplot(merged, aes(x = V2, y = V3, color = type))
+		p = p + geom_line()# + guides(color = F)
+		p = p + xlab("Temperature [degC]")
+		p = p + ylab("Dissociated/Unfolded fraction")
+		if ( !is.na(thybr) ) p = p + geom_vline(
+			aes(xintercept = thybr, color = "Thybrid"), linetype = 2)
+		p = p + geom_hline(aes(yintercept = 0.5,
+			color = "Melting point"), linetype = 2)
+		p = p + ggtitle(name) + xlim(xrange)
+		options(warn=-1); print(p); options(warn=0)
+
+	} else { # H2
+
+		subt$type = "Color"
+		subs$type = "Color+Forward 2nd struct."
+		a$type =  "Targets"
+
+		#merged = do.call(rbind, list(subt, subs, a))
+		merged = rbind(subt, subs)
+
+		p = ggplot(merged, aes(x = V2, y = V3, color = type))
+		p = p + geom_line()# + guides(color = F)
+		p = p + xlab("Temperature [degC]")
+		p = p + ylab("Dissociated/Unfolded fraction")
+		if ( !is.na(thybr) ) p = p + geom_vline(
+			aes(xintercept = thybr, color = "Thybrid"), linetype = 2)
+		p = p + geom_hline(aes(yintercept = 0.5,
+			color = "Melting point"), linetype = 2)
+		p = p + ggtitle(paste0(probe_name, ' : H2')) + xlim(xrange)
+		p = p + geom_line(data = a, aes(
+			x = V2, y = V3, group = V1, color = type))
+		options(warn=-1); print(p); options(warn=0)
+
+	}
 }
 
 # Produce plot
