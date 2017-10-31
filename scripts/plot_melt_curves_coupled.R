@@ -38,12 +38,17 @@ parser = add_argument(parser, arg = '--probe-name', short = '-n',
 	type = class(''), help = 'Probe name.', default = "", nargs = 1)
 parser = add_argument(parser, arg = '--thybr', short = '-t', type = class(0.),
 	help = 'Hybridization temperature.', default = NA, nargs = 1)
+parser = add_argument(parser, arg = "--trange", type = class(0),
+	help = 'Temperature range for plot limits.', default = 40, nargs = 1)
 
 # Parse arguments
 p = parse_args(parser)
 
 # Attach argument values to variables
 attach(p['' != names(p)])
+
+# Manipulations
+xrange = c(thybr - trange / 2, thybr + trange / 2)
 
 # RUN ==========================================================================
 
@@ -71,8 +76,8 @@ for (name in unique(t$V1)) {
 		aes(xintercept = thybr, color = "Thybrid"), linetype = 2)
 	p = p + geom_hline(aes(yintercept = 0.5,
 		color = "Melting point"), linetype = 2)
-	p = p + ggtitle(name)
-	print(p)
+	p = p + ggtitle(name) + xlim(xrange)
+	options(warn=-1); print(p); options(warn=0)
 
 }
 
