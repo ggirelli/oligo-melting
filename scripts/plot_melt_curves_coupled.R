@@ -106,7 +106,7 @@ for (name in unique(t$V1)) {
 			aes(xintercept = thybr, color = "Thybrid"), linetype = 2)
 		p = p + geom_hline(aes(yintercept = 0.5,
 			color = "Melting point"), linetype = 2)
-		p = p + ggtitle(paste0(probe_name, ' : H2')) + xlim(xrange)
+		p = p + ggtitle(paste0(probe_name, ' : ', name, ' : H2')) + xlim(xrange)
 		p = p + geom_line(data = acur, aes(
 			x = V2, y = V3, group = V1, color = type))
 		options(warn=-1); print(p); options(warn=0)
