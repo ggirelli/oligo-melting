@@ -93,6 +93,7 @@ for (name in unique(t$V1)) {
 		subt$type = "Color"
 		subs$type = "Color+Forward 2nd struct."
 		a$type =  "Targets"
+		acur = a[grepl(name, a$V1),]
 
 		#merged = do.call(rbind, list(subt, subs, a))
 		merged = rbind(subt, subs)
@@ -106,7 +107,7 @@ for (name in unique(t$V1)) {
 		p = p + geom_hline(aes(yintercept = 0.5,
 			color = "Melting point"), linetype = 2)
 		p = p + ggtitle(paste0(probe_name, ' : H2')) + xlim(xrange)
-		p = p + geom_line(data = a, aes(
+		p = p + geom_line(data = acur, aes(
 			x = V2, y = V3, group = V1, color = type))
 		options(warn=-1); print(p); options(warn=0)
 
