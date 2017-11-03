@@ -13,8 +13,22 @@
 
 # DEPENDENCIES =================================================================
 
-suppressMessages(library(argparser))
-library(ggplot2)
+if (!require('argparser')) {
+	install.packages("argparser", repos = "http://cran.uk.r-project.org")
+	if (!require('argparser')) {
+		stop(paste0('The R package argparser was not found. ',
+			'Tried to automatically install the package but failed.',
+			'Install it manually with install.packages(argparser)'))
+	}
+}
+if (!require('ggplot2')) {
+	install.packages("ggplot2", repos = "http://cran.uk.r-project.org")
+	if (!require('ggplot2')) {
+		stop(paste0('The R package ggplot2 was not found. ',
+			'Tried to automatically install the package but failed.',
+			'Install it manually with install.packages(ggplot2)'))
+	}
+}
 
 # INPUT ========================================================================
 
