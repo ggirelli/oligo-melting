@@ -269,7 +269,7 @@ def duMelt_fa_adj(tm, h, s, seq, oligo_conc,
     # Apply to free energy
     if "wright" == fa_mode:
         m = mvalue(len(seq))
-        if "sugimoto" in tt_mode:
+        if tt_mode in ["DNA:RNA", "RNA:DNA"]:
             tm = (h + m * dfac) / (R * math.log(oligo_conc / 4) + s)
         else:
             tm = (h + m * dfac) / (R * math.log(oligo_conc) + s)
@@ -485,7 +485,7 @@ def duDissoc_fraction(h, t, s, oligo_conc, tt_mode, gplus):
     dg = h - t * s + gplus
 
     # Calculate factor
-    if "sugimoto" in tt_mode:
+    if tt_mode in ["DNA:RNA", "RNA:DNA"]:
         factor = math.exp(-dg / (R * t)) * (oligo_conc / 4)
     else:
         factor = math.exp(-dg / (R * t)) * oligo_conc
@@ -566,7 +566,7 @@ def duMelt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
     s /= 1e3
 
     # Calculate melting temperature in Celsius
-    if 'sugimoto' in tt_mode:
+    if tt_mode in ["DNA:RNA", "RNA:DNA"]:
         tm = h / (s + R * math.log(oligo_conc / 4))
     else:
         tm = h / (s + R * math.log(oligo_conc))
@@ -607,11 +607,11 @@ def duMelt_calc(name, seq, oligo_conc, na_conc, mg_conc,
         return
 
     # Check that the correct nucleic acid type was provided
-    if tt_mode in ['sugimotod', 'allawi']:
+    if tt_mode in ['DNA:RNA', 'DNA:DNA']:
         if 'U' in seq:
             print('The option -t %s requires a DNA sequence.' % (tt_mode,))
             return
-    elif tt_mode in ['sugimotor', 'freier']:
+    elif tt_mode in ['RNA:DNA', 'RNA:RNA']:
         if 'T' in seq:
             print('The option -t %s requires a RNA sequence.' % (tt_mode,))
             return
