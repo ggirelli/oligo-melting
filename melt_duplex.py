@@ -227,28 +227,30 @@ if not use_file:
     data['seq'] = seq
     duMelt_calc(**data)
 else:
-    # Empty sequence dictionary
-    fastad = {}
+    if not is_verbose:
+        print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
     # Input file case
     curr_head = ""
+    curr_seq = ""
     with open(seq) as fin:
         for row in fin:
             if ">" == row[0]:
-                curr_head = row[1:].strip()
-            else:
-                if curr_head in fastad.keys():
-                    fastad[curr_head] = fastad[curr_head] + row.strip()
-                else:
-                    fastad[curr_head] = row.strip()
+                if not 0 == len(curr_seq) and not 0 == len(curr_head):
+                    # Calculate before moving to the next item
+                    data['name'] = curr_head
+                    data['seq'] = curr_seq
+                    duMelt_calc(**data)
 
-    # Calculate for each fasta item
-    if not is_verbose:
-        print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
-    for (name, seq) in fastad.items():
-        data['name'] = name
-        data['seq'] = seq
-        duMelt_calc(**data)
+                curr_head = row[1:].strip()
+                curr_seq = ""
+            else:
+                curr_seq += row.strip()
+
+    # Calculate for last item
+    data['name'] = curr_head
+    data['seq'] = curr_seq
+    duMelt_calc(**data)
 
 # END ==========================================================================
 

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [unreleased]
+### ...
+
+## [1.4.5]
 ### Fixed
 - Fixed issue with new interaction type labeling system.
 
@@ -14,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Separated curve calculation and fraction calculation to different functions.
 - Harmonized `melt_X.py` scripts output.
+- Better fasta reading management: not kept in memory and considering sequences with same header as separate fasta items.
 
 ### Added
 - `plot_melt_curves_coupled.R` for single-oligo coupled melting curve plot.
@@ -71,6 +75,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.0.0]
 
 * [unreleased] https://github.com/ggirelli/oligo-melting
+* [1.4.5] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.5
 * [1.4.4] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.4
 * [1.4.3] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.3
 * [1.4.2] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.2
