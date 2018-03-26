@@ -5,10 +5,13 @@ A Python3 package for melting temperature calculation of oligonucleotides hybrid
 
 #### Features
 
-* Handle DNA:DNA, RNA:RNA and DNA/RNA hybridizations.
+* Handles DNA:DNA, RNA:RNA and DNA/RNA hybridizations.
+* Corrects for both salt and chemicals.
 * Compatible with UNAfold (OligoArrayAux) output for direct salt and chemicals (denaturants) correction.
 * Produces melting curves for the provided sequence.
 * Input either as single sequence or FASTA file.
+* Slightly faster than BioPython.SeqUtils.MeltingTemp.
+* Provides dG, dS and dH alongside melting temperature.
 
 #### Limitations
 
