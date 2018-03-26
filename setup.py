@@ -24,6 +24,7 @@ setup(name='oligo_melting',
 	description='''A Python3 package for melting temperature calculation of
 		oligonucleotides hybridization and secondary structures.''',
 	long_description=long_description,
+	long_description_content_type='text/markdown',
 	url='https://github.com/ggirelli/oligo-melting',
 	author='Gabriele Girelli',
 	author_email='gabriele.girelli@scilifelab.se',
