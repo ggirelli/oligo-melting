@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### ...
+- ...
+
+
+
 ## [2.0.1]
 ### Changed
 - Re-packed software for pypi.
@@ -103,6 +109,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 * [unreleased] https://github.com/ggirelli/oligo-melting
+* [2.0.1] https://github.com/ggirelli/oligo-melting/releases/tag/v2.0.1
 * [2.0.0] https://github.com/ggirelli/oligo-melting/releases/tag/v2.0.0
 * [1.4.5] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.5
 * [1.4.4] https://github.com/ggirelli/oligo-melting/releases/tag/v1.4.4
