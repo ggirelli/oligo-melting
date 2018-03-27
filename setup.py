@@ -13,7 +13,6 @@ from codecs import open
 import os
 
 here = os.path.abspath(os.path.dirname(__file__))
-bindir = os.path.join(here, "bin/")
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -39,7 +38,7 @@ setup(name='oligo_melting',
 	keywords='DNA chemistry melting temperature modeling RNA salt denaturant',
 	packages=["oligo_melting"],
 	install_requires=[],
-	scripts=[os.path.join(bindir, fp) for fp in os.listdir(bindir)],
+	scripts=["bin/melt_duplex", "bin/melt_secstr"],
 	test_suite="nose.collector",
 	tests_require=["nose"],
 )

@@ -6,9 +6,10 @@
 @description: methods for basic nucleic acid sequence management.
 '''
 
-# DEPENDENCIES =================================================================
+# CONSTANTS ====================================================================
 
-import oligo_melting as OligoMelt
+AB_DNA = ["ACGTRYKMSWBDHVN", "TGCAYRMKSWVHDBN"]
+AB_RNA = ["ACGURYKMSWBDHVN", "UGCAYRMKSWVHDBN"]
 
 # FUNCTIONS ====================================================================
 
@@ -27,9 +28,9 @@ def rc(na, t):
 
     # Select alphabet
     if t == 'dna':
-        ab = OligoMelt.AB_DNA
+        ab = AB_DNA
     elif t == 'rna':
-        ab = OligoMelt.AB_RNA
+        ab = AB_RNA
     else:
         print('ERROR: unknown na type.')
         return()

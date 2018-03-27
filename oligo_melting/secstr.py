@@ -11,9 +11,15 @@
 
 import math
 
+
+# CONSTANTS ====================================================================
+
+# Gas constant
+R = 1.987 / 1000    # kcal / (K mol)
+
 # FUNCTIONS ====================================================================
 
-def melt_fa_adj(tm, fa_conc, fa_conc_0 = None):
+def adj_fa(tm, fa_conc, fa_conc_0 = None):
     # Adjust secondary structure melting temperature based on formamide
     # concentration. Method adapted to work with OligoArrayAux output.
     # Based on McConaughy, Biochemistry(8), 1969
@@ -63,7 +69,7 @@ def melt_curve(h, s, tm, fa_conc, trange, tstep):
         k = unfolded_fraction(h, t, s)
 
         # Adjust output temperature
-        t_out = melt_fa_adj(t, fa_conc)
+        t_out = adj_fa(t, fa_conc)
 
         # Append melting data
         data.append((t_out, k))

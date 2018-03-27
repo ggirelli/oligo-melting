@@ -10,12 +10,159 @@
 # DEPENDENCIES =================================================================
 
 import math
-
 import oligo_melting as OligoMelt
+import os
+import sys
+
+# CONSTANTS ====================================================================
+
+# Gas constant
+R = 1.987 / 1000    # kcal / (K mol)
+
+# Thermodynamic tables ---------------------------------------------------------
+
+# Table from Freier et al, PNAS(83), 1986 - in 1 M NaCl [RNA]
+# dH0: kcal / mol
+# dS0: eu = cal / (K mol)
+# dG0: kcal / mol
+NN_TABLE_RNA_RNA = {
+    #                dH0     dS0     dG0
+    'AA'        :   (-6.6,  -18.4,  -0.9),
+    'UU'        :   (-6.6,  -18.4,  -0.9),
+    'AU'        :   (-5.7,  -15.5,  -0.9),
+    'UA'        :   (-8.1,  -22.6,  -1.1),
+    'CA'        :   (-10.5, -27.8,  -1.8),
+    'UG'        :   (-10.5, -27.8,  -1.8),
+    'TG'        :   (-10.5, -27.8,  -1.8),
+    'CU'        :   (-7.6,  -19.2,  -1.7),
+    'AG'        :   (-7.6,  -19.2,  -1.7),
+    'GA'        :   (-13.3, -35.5,  -2.3),
+    'UC'        :   (-13.3, -35.5,  -2.3),
+    'GU'        :   (-10.2, -26.2,  -2.1),
+    'AC'        :   (-10.2, -26.2,  -2.1),
+    'CG'        :   (-8.0,  -19.4,  -2.0),
+    'GC'        :   (-14.2, -34.9,  -3.4),
+    'GG'        :   (-12.2, -29.7,  -2.9),
+    'CC'        :   (-12.2, -29.7,  -2.9),
+    'endA'      :   (0,     -10.8,  3.4),
+    'endC'      :   (0,     -10.8,  3.4),
+    'endG'      :   (0,     -10.8,  3.4),
+    'endU'      :   (0,     -10.8,  3.4),
+    'has_end'   :   True,
+    'has_init'  :   False,
+    'sym'       :   (0,     -1.4,   0.4),
+    'has_sym'   :   True
+}
+
+# Table from Sugimoto et al, Biochemistry(34), 1995 - in 1 M NaCl [DNA/RNA dupl]
+# For calculation from the RNA sequence 5'-to-3'
+# dH0: kcal / mol
+# dS0: cal / (K mol)
+# dG0: kcal / mol
+NN_TABLE_RNA_DNA = {
+    #               dH0     dS0     dG0
+    'AA'        :   (-7.8,  -21.9,  -1.0),
+    'AC'        :   (-5.9,  -12.3,  -2.1),
+    'AG'        :   (-9.1,  -23.5,  -1.8),
+    'AU'        :   (-8.3,  -23.9,  -0.9),
+    'CA'        :   (-9.0,  -26.1,  -0.9),
+    'CC'        :   (-9.3,  -23.2,  -2.1),
+    'CG'        :   (-16.3, -47.1,  -1.7),
+    'CU'        :   (-7.0,  -19.7,  -0.9),
+    'GA'        :   (-5.5,  -13.5,  -1.3),
+    'GC'        :   (-8.0,  -17.1,  -2.7),
+    'GG'        :   (-12.8, -31.9,  -2.9),
+    'GU'        :   (-7.8,  -21.6,  -1.1),
+    'UA'        :   (-7.8,  -23.2,  -0.6),
+    'UC'        :   (-8.6,  -22.9,  -1.5),
+    'UG'        :   (-10.4, -28.4,  -1.6),
+    'UU'        :   (-11.5, -36.4,  -0.2),
+    'has_end'   :   False,
+    'init'      :   (1.9,   -3.9,   3.1),
+    'has_init'  :   True,
+    'has_sym'   :   False
+}
+
+# Table from Sugimoto et al, Biochemistry(34), 1995 - in 1 M NaCl [DNA/RNA dupl]
+# For calculation from the DNA sequence 5'-to-3'
+# dH0: kcal / mol
+# dS0: cal / (K mol)
+# dG0: kcal / mol
+NN_TABLE_DNA_RNA = {
+    #               dH0     dS0     dG0
+    'TT'        :   (-7.8,  -21.9,  -1.0),
+    'GT'        :   (-5.9,  -12.3,  -2.1),
+    'CT'        :   (-9.1,  -23.5,  -1.8),
+    'AT'        :   (-8.3,  -23.9,  -0.9),
+    'TG'        :   (-9.0,  -26.1,  -0.9),
+    'GG'        :   (-9.3,  -23.2,  -2.1),
+    'CG'        :   (-16.3, -47.1,  -1.7),
+    'AG'        :   (-7.0,  -19.7,  -0.9),
+    'TC'        :   (-5.5,  -13.5,  -1.3),
+    'GC'        :   (-8.0,  -17.1,  -2.7),
+    'CC'        :   (-12.8, -31.9,  -2.9),
+    'AC'        :   (-7.8,  -21.6,  -1.1),
+    'TA'        :   (-7.8,  -23.2,  -0.6),
+    'GA'        :   (-8.6,  -22.9,  -1.5),
+    'CA'        :   (-10.4, -28.4,  -1.6),
+    'AA'        :   (-11.5, -36.4,  -0.2),
+    'init'      :   (1.9,   -3.9,   3.1),
+    'has_init'  :   True,
+    'has_end'   :   False,
+    'has_sym'   :   False
+}
+
+# Table from Allawi&Santalucia, Biochemistry(36), 1997 - in 1 M NaCl [DNA]
+# dH0: kcal / mol
+# dS0: eu = cal / (K mol)
+# dG0: kcal / mol
+NN_TABLE_DNA_DNA = {
+    #                dH0     dS0     dG0
+    'AA'        :   (-7.9,  -22.2,  -1.0),
+    'TT'        :   (-7.9,  -22.2,  -1.0),
+    'AT'        :   (-7.2,  -20.4,  -0.88),
+    'TA'        :   (-7.2,  -21.3,  -0.58),
+    'CA'        :   (-8.5,  -22.7,  -1.45),
+    'TG'        :   (-8.5,  -22.7,  -1.45),
+    'GT'        :   (-8.4,  -22.4,  -1.44),
+    'AC'        :   (-8.4,  -22.4,  -1.44),
+    'CT'        :   (-7.8,  -21.0,  -1.28),
+    'AG'        :   (-7.8,  -21.0,  -1.28),
+    'GA'        :   (-8.2,  -22.2,  -1.3),
+    'TC'        :   (-8.2,  -22.2,  -1.3),
+    'CG'        :   (-10.6, -27.2,  -2.17),
+    'GC'        :   (-9.8,  -24.4,  -2.24),
+    'GG'        :   (-8.0,  -19.9,  -1.84),
+    'CC'        :   (-8.0,  -19.9,  -1.84),
+    'endG'      :   (.1,    -2.8,   .98),
+    'endC'      :   (.1,    -2.8,   .98),
+    'endA'      :   (2.3,   4.1,    1.03),
+    'endT'      :   (2.3,   4.1,    1.03),
+    'has_end'   :   True,
+    'has_init'  :   False,
+    'sym'       :   (2.3,   4.1,    1.03),
+    'has_sym'   :   True
+}
+
+# Tables and labels
+NN_TABLES = {
+    "DNA:DNA" : NN_TABLE_DNA_DNA, "RNA:RNA" : NN_TABLE_RNA_RNA, 
+    "DNA:RNA" : NN_TABLE_DNA_RNA, "RNA:DNA" : NN_TABLE_RNA_DNA
+}
+NN_LABELS = list(NN_TABLES.keys())
+NN_HYB_LABELS = ["DNA:RNA", "RNA:DNA"]
+NN_DNA_TEMPLATE_LABELS = ["DNA:RNA", "DNA:DNA"]
+NN_RNA_TEMPLATE_LABELS = ["RNA:RNA", "RNA:DNA"]
+
+# Formamide correction ---------------------------------------------------------
+
+FA_MODE_LABELS = ["wright", "mcconaughy"]
+FA_MODE_WRIGHT2014 = FA_MODE_LABELS[0]
+FA_MODE_MCCONA1969 = FA_MODE_LABELS[1]
 
 # FUNCTIONS ====================================================================
 
-def melt_fa_adj(tm, h, s, seq, oligo_conc,
+def adj_fa(tm, h, s, seq, oligo_conc,
     fa_conc, fa_mode, mvalue, tt_mode, fa_conc_0 = None):
     # Adjust melting temperature of a duplex based on formamide concentration.
     # Based on Wright, Appl. env. microbiol.(80), 2014
@@ -48,20 +195,20 @@ def melt_fa_adj(tm, h, s, seq, oligo_conc,
         return(tm)
     
     # Apply linear to melting temperature
-    if OligoMelt.FA_MODE_MCCONA1969 == fa_mode:
+    if FA_MODE_MCCONA1969 == fa_mode:
         tm -= 0.72 * dfac
 
     # Apply to free energy
-    if OligoMelt.FA_MODE_WRIGHT2014 == fa_mode:
+    if FA_MODE_WRIGHT2014 == fa_mode:
         m = mvalue(len(seq))
-        if tt_mode in OligoMelt.NN_HYB_LABELS:
+        if tt_mode in NN_HYB_LABELS:
             tm = (h + m * dfac) / (R * math.log(oligo_conc / 4) + s)
         else:
             tm = (h + m * dfac) / (R * math.log(oligo_conc) + s)
 
     return(tm)
 
-def melt_na_adj(tm, na_conc, fgc, na_conc_0 = None):
+def adj_na(tm, na_conc, fgc, na_conc_0 = None):
     # Adjust melting temperature of a duplexx based on sodium concentration.
     # Based on Owczarzy et al, Biochemistry(43), 2004
     # 
@@ -100,7 +247,7 @@ def melt_na_adj(tm, na_conc, fgc, na_conc_0 = None):
 
     return(Tm2)
 
-def melt_mg_adj(tm, mg_conc, fgc):
+def adj_mg(tm, mg_conc, fgc, seq):
     # Adjust melting temperature a duplexx based on sodium concentration.
     # Based on Owczarzy et al, Biochemistry(47), 2008
     # 
@@ -135,7 +282,7 @@ def melt_mg_adj(tm, mg_conc, fgc):
 
     return(Tm3)
 
-def melt_ion_adj(tm, na_conc, mg_conc, fgc, na_conc_0 = None):
+def adj_ions(tm, na_conc, mg_conc, fgc, seq, na_conc_0 = None):
     # Adjust melting temperature a duplexx based on ion concentration
     # 
     # Args:
@@ -151,9 +298,9 @@ def melt_ion_adj(tm, na_conc, mg_conc, fgc, na_conc_0 = None):
         na_conc_0 = 1.
 
     if 0 != mg_conc:
-        return(melt_mg_adj(tm, mg_conc, fgc))
+        return(adj_mg(tm, mg_conc, fgc, seq))
     elif 0 != na_conc:
-        return(melt_na_adj(tm, na_conc, fgc, na_conc_0))
+        return(adj_na(tm, na_conc, fgc, na_conc_0))
     else:
         return(tm)
 
@@ -184,23 +331,23 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
     data = []
 
     # Adjust melting temperature
-    if OligoMelt.FA_MODE_WRIGHT2014 == fa_mode:
-        tm = melt_fa_adj(tm, h, s, seq, oligo_conc,
+    if FA_MODE_WRIGHT2014 == fa_mode:
+        tm = adj_fa(tm, h, s, seq, oligo_conc,
         	fa_conc, fa_mode, mvalue, tt_mode)
 
     # Explore the temperature range
     t = tm - trange / 2.
     while t <= tm + trange / 2.:
-        if OligoMelt.FA_MODE_MCCONA1969 == fa_mode:
+        if FA_MODE_MCCONA1969 == fa_mode:
             # Calculate dissociated fraction
             k = dissoc_fraction(h, t, s, oligo_conc, tt_mode, 0)
 
             # Adjust output temperature
-            t_out = melt_fa_adj(t, h, s, seq, oligo_conc,
+            t_out = adj_fa(t, h, s, seq, oligo_conc,
             	fa_conc, fa_mode, mvalue, tt_mode)
-            t_out = melt_ion_adj(t_out, na_conc, mg_conc, fgc)
+            t_out = adj_ions(t_out, na_conc, mg_conc, fgc, seq)
 
-        if OligoMelt.FA_MODE_WRIGHT2014 == fa_mode:
+        if FA_MODE_WRIGHT2014 == fa_mode:
             # Calculate current FA m-value
             m = mvalue(len(seq))
 
@@ -208,7 +355,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
             k = dissoc_fraction(h, t, s, oligo_conc, tt_mode, m * fa_conc)
 
             # Adjust output temperature
-            t_out = melt_ion_adj(t, na_conc, mg_conc, fgc)
+            t_out = adj_ions(t, na_conc, mg_conc, fgc, seq)
 
         # Append melting data
         data.append((t_out, k))
@@ -237,7 +384,7 @@ def dissoc_fraction(h, t, s, oligo_conc, tt_mode, gplus):
     dg = h - t * s + gplus
 
     # Calculate factor
-    if tt_mode in OligoMelt.NN_HYB_LABELS:
+    if tt_mode in NN_HYB_LABELS:
         factor = math.exp(-dg / (R * t)) * (oligo_conc / 4)
     else:
         factor = math.exp(-dg / (R * t)) * oligo_conc
@@ -248,13 +395,12 @@ def dissoc_fraction(h, t, s, oligo_conc, tt_mode, gplus):
     # Output
     return(k)
 
-def melt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
+def calc_tm_std(seq, tt_mode, couples, oligo_conc):
     # Calculate melting temperature of a duplex at standard 1 M NaCl (monovalent
     # ions conc). Based on SantaLucia, PNAS(95), 1998
     # 
     # Args:
     #   seq (string): oligonucleotide sequence.
-    #   tt (dict): thermodynamic table list.
     #   tt_mode (string): thermodynamic table label.
     #   couples (list): list of base dimers.
     #   oligo_conc (float): oligonucleotide concentration in M.
@@ -262,40 +408,44 @@ def melt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
     # Returns:
     #   tuple: hybridization enthalpy, enthropy and melting temperature.
     
+
+    # Select thermodynamic table
+    tt = NN_TABLES[tt_mode]
+    
     # Standard 1 M NaCl
     na_conc_0 = 1.
 
     # Calculate dH0(N-N)
-    h = sum([tt[tt_mode][c][0] for c in couples])
+    h = sum([tt[c][0] for c in couples])
 
     # Add initiation enthalpy
-    if tt[tt_mode]['has_end']:
-        h += tt[tt_mode]['end%s' % (seq[0],)][0]
-        h += tt[tt_mode]['end%s' % (seq[-1],)][0]
-    if tt[tt_mode]['has_init']:
-        h += tt[tt_mode]['init'][0]
+    if tt['has_end']:
+        h += tt['end%s' % (seq[0],)][0]
+        h += tt['end%s' % (seq[-1],)][0]
+    if tt['has_init']:
+        h += tt['init'][0]
 
     # Correct enthalpy for symmetry
-    if tt[tt_mode]['has_sym'] and seq == OligoMelt.rc(seq, 'dna'):
-        h += tt[tt_mode]['sym'][0]
+    if tt['has_sym'] and seq == OligoMelt.rc(seq, 'dna'):
+        h += tt['sym'][0]
 
     # Calculate dS0(N-N) in kcal / (K mol)
-    s = sum([tt[tt_mode][c][1] for c in couples])
+    s = sum([tt[c][1] for c in couples])
 
     # Add initiation enthropy
-    if tt[tt_mode]['has_end']:
-        s += tt[tt_mode]['end%s' % (seq[0],)][1]
-        s += tt[tt_mode]['end%s' % (seq[-1],)][1]
-    if tt[tt_mode]['has_init']:
-        s += tt[tt_mode]['init'][1]
+    if tt['has_end']:
+        s += tt['end%s' % (seq[0],)][1]
+        s += tt['end%s' % (seq[-1],)][1]
+    if tt['has_init']:
+        s += tt['init'][1]
 
     # Correct enthalpy for symmetry
-    if tt[tt_mode]['has_sym'] and seq == OligoMelt.rc(seq, 'dna'):
-        s += tt[tt_mode]['sym'][1]
+    if tt['has_sym'] and seq == OligoMelt.rc(seq, 'dna'):
+        s += tt['sym'][1]
     s /= 1e3
 
     # Calculate melting temperature in Celsius
-    if tt_mode in OligoMelt.NN_HYB_LABELS:
+    if tt_mode in NN_HYB_LABELS:
         tm = h / (s + R * math.log(oligo_conc / 4))
     else:
         tm = h / (s + R * math.log(oligo_conc))
@@ -303,9 +453,9 @@ def melt_std_calc(seq, tt, tt_mode, couples, oligo_conc):
     # Output
     return((h, s, tm))
 
-def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
+def calc_tm(name, seq, oligo_conc, na_conc, mg_conc,
 	fa_conc, fa_mode, fa_mval_s, mvalue,
-    tt, tt_mode, celsius, is_verbose,
+    tt_mode, celsius, is_verbose,
     do_curve, curve_step, curve_range, curve_outpath):
     # Calculate melting temperature of provided oligo duplex sequence.
     # 
@@ -318,7 +468,6 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     #   fa_mode (string): formamide correction lavel.
     #   fa_mval_s (string): formamide m-value string.
     #   mvalue (lambda): formamide m-value function.
-    #   tt (dict): thermodynamic table list.
     #   tt_mode (string): thermodynamic table label.
     #   celsius (bool): convert K to degC.
     #   is_verbose (bool): be verbose.
@@ -326,6 +475,9 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     #   curve_step (float): melting curve temperature step.
     #   curve_range (float): melting curve temperature range.
     #   curve_outpath (string): melting curve output path.
+
+    # Select thermodynamic table
+    tt = NN_TABLES[tt_mode]
 
     # Make string uppercase
     seq = seq.upper()
@@ -336,11 +488,11 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
         return
 
     # Check that the correct nucleic acid type was provided
-    if tt_mode in OligoMelt.NN_DNA_TEMPLATE_LABELS:
+    if tt_mode in NN_DNA_TEMPLATE_LABELS:
         if 'U' in seq:
             print('The option -t %s requires a DNA sequence.' % (tt_mode,))
             return
-    elif tt_mode in OligoMelt.NN_RNA_TEMPLATE_LABELS:
+    elif tt_mode in NN_RNA_TEMPLATE_LABELS:
         if 'T' in seq:
             print('The option -t %s requires a RNA sequence.' % (tt_mode,))
             return
@@ -354,25 +506,25 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     # 1 M NaCl case
     # Based on SantaLucia, PNAS(95), 1998
     # -----------------------------------
-    (h, s, Tm1) = melt_std_calc(seq, tt, tt_mode, couples, oligo_conc)
+    (h, s, Tm1) = calc_tm_std(seq, tt_mode, couples, oligo_conc)
 
     # Adjust for FA
     # Based on Wright, Appl. env. microbiol.(80), 2014
     # Or on McConaughy, Biochemistry(8), 1969
     # ------------------------------------------------
-    Tm2 = melt_fa_adj(Tm1, h, s, seq, oligo_conc,
+    Tm2 = adj_fa(Tm1, h, s, seq, oligo_conc,
     	fa_conc, fa_mode, mvalue, tt_mode)
 
     # Adjusted for [Na]
     # Based on Owczarzy et al, Biochemistry(43), 2004
     # -----------------------------------------------
-    Tm3 = melt_na_adj(Tm2, na_conc, fgc)
+    Tm3 = adj_na(Tm2, na_conc, fgc)
 
     # Adjusted for Mg
     # Based on Owczarzy et al, Biochemistry(47), 2008
     # -----------------------------------------------
     if 0 < mg_conc:
-        Tm4 = melt_mg_adj(Tm2, mg_conc, fgc)
+        Tm4 = adj_mg(Tm2, mg_conc, fgc, seq)
     else:
         Tm4 = Tm3
 
@@ -380,6 +532,10 @@ def melt_calc(name, seq, oligo_conc, na_conc, mg_conc,
     # -----------------------
     
     if do_curve:
+        if 0 == len(os.path.basename(curve_outpath)):
+            msg = "\n!!!ERROR! --out-curve should be a file, not a folder."
+            msg += "\n          Path: %s" % curve_outpath
+            sys.exit(msg)
         fout = open(curve_outpath, 'a+')
         tab = melt_curve(seq, oligo_conc, na_conc, mg_conc,
         	fa_conc, fa_mode, mvalue, fgc, h, s, Tm1,
