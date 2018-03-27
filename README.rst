@@ -52,10 +52,10 @@ Usage
 
 The `melt_duplex` command allows to calculate the melting temperature of a nucleic acid duplex, provided the sequence of one of the two strands.
 
-The hybridization delta free energy calculation is based on the N-N thermodynamic values in literature and is available for DNA:DNA[^3], RNA:RNA[^1] and DNA:RNA[^2] duplexes. The melting temperature calculation is based on Santalucia, 1998[^4]. Sodium and cagnesium concentration correction is based on the work of Owczarzy et al[^5][^6]. Formamide correction can be performed based on two different published models[^7][^8].
+The hybridization delta free energy calculation is based on the N-N thermodynamic values in literature and is available for DNA:DNA[3], RNA:RNA[1] and DNA:RNA[2] duplexes. The melting temperature calculation is based on Santalucia, 1998[4]. Sodium and cagnesium concentration correction is based on the work of Owczarzy et al[5][6]. Formamide correction can be performed based on two different published models[7][8].
 
 * Use the `-t` option to specify the **type of nucleic acid duplex**.
-* Use `--fa-mode` to switch between linear melting temperature **formamide-based correction**[^7] and linear &delta;G formamide-based correction[^8].
+* Use `--fa-mode` to switch between linear melting temperature **formamide-based correction**[7] and linear &delta;G formamide-based correction[8].
 * Use `--fa-mvalue` together with `--fa-mode wright` to specify the **m-value** for the formamide-based correction.
 * Provide the path to a **fasta file** instead of a single sequence to calculate the melting temperature of every sequence in the file.
 * Use the `-v` option to trigger the verbose mode, which provides more **details** for every single sequence.
@@ -89,14 +89,14 @@ The `Duplex` module contains functions for duplex hybridization and melting temp
 References
 ---
 
-* [^1]: Freier et al, PNAS(83), 1986;
-* [^2]: Sugimoto et al, Biochemistry(34), 1995.
-* [^3]: Allawi & Santalucia, Biochemistry(36), 1997;
-* [^4]: SantaLucia, PNAS(95), 1998;
-* [^5]: Owczarzy et al, Biochemistry(43), 2004;
-* [^6]: Owczarzy et al, Biochemistry(47), 2008;
-* [^7]: McConaughy et al, Biochemistry(8), 1969;
-* [^8]: Wright et al, Appl. env. microbiol.(80), 2014.
+* [1]: Freier et al, PNAS(83), 1986;
+* [2]: Sugimoto et al, Biochemistry(34), 1995.
+* [3]: Allawi & Santalucia, Biochemistry(36), 1997;
+* [4]: SantaLucia, PNAS(95), 1998;
+* [5]: Owczarzy et al, Biochemistry(43), 2004;
+* [6]: Owczarzy et al, Biochemistry(47), 2008;
+* [7]: McConaughy et al, Biochemistry(8), 1969;
+* [8]: Wright et al, Appl. env. microbiol.(80), 2014.
 
 License
 ---
