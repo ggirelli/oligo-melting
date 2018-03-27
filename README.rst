@@ -108,4 +108,4 @@ Copyright (c) 2017 Gabriele Girelli
 
 ---
 
-This project comes from the [potpourri](https://github.com/ggirelli/potpourri) sandbox.  \( ﾟヮﾟ)/
+This project comes from the [potpourri](https://github.com/ggirelli/potpourri) sandbox.  \\( ﾟヮﾟ)/
