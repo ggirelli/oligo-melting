@@ -1,4 +1,4 @@
-oligo-melting v2.0.1.post1
+oligo-melting v2.0.1.post2
 ===
 
 A Python3 package for melting temperature calculation of oligonucleotides hybridization and secondary structures.
@@ -64,7 +64,7 @@ The hybridization delta free energy calculation is based on the N-N thermodynami
 
 #### Secondary structure
 
-The `melt_second` script allows to correct the melting temperature of a nucleic acid secondary structure, previously calculated with OligoArrayAux, and to produce the corresponding melting curves.
+The `melt_secstr` script allows to correct the melting temperature of a nucleic acid secondary structure, previously calculated with OligoArrayAux, and to produce the corresponding melting curves.
 
 ### As a library
 
