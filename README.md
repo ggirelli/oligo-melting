@@ -18,6 +18,31 @@ A Python3 package for melting temperature calculation of oligonucleotides hybrid
 * Does not handle mismatches or dangling ends
 * Does not handle ambiguous bases
 
+Installation
+---
+
+To **install**, run the following:
+
+```
+git clone http://github.com/ggirelli/gpseq-img-py
+cd gpseq-img-py
+sudo -H pip3 install .
+```
+
+To **uninstall** run the following from within the repository folder:
+
+```
+sudo -H pip3 uninstall oligo_melting
+```
+
+To **update**, first uninstall, and then run the following from within the repository folder.
+
+```
+git pull
+sudo -H pip3 uninstall oligo_melting
+sudo -H pip3 install .
+```
+
 Usage
 ---
 
@@ -49,16 +74,20 @@ Import the package and use the corresponding functions.
 import oligo_melting as OligoMelt
 
 seq = "CAGTCAGTCGATC"
-OligoMelt.Duplex.calc_tm(seq)
+
+# Calculate melting temperature for 25uM oligos
+(name, g, h, s, tm, seq) = OligoMelt.Duplex.calc_tm(seq, oligo_conc = 25e-6)
+print(tm)
+
+# Adjust for 300 mM [Na+]
+tm = OligoMelt.Duplex.adj_ions(tm, 0.3, 0, seq)
+print(tm)
 ```
 
-The `meltlib.py` function library (available in `/lib/`) contains all the functions necessary to calculate and/or correct a duplex melting temperature based on a number of parameters.
+The `Duplex` module contains functions for duplex hybridization and melting temperature calculation, while the `SecStr` module contains similar methods for evaluating secundary structure melting temperatures.
 
-### Additional scripts
-
-* `plot_melt_curves.R` to plot single oligo melting curves. Implemented in `R`, requires the `ggplot2` and `argparser` packages to run.
-
-## References
+References
+---
 
 * [^1]: Freier et al, PNAS(83), 1986;
 * [^2]: Sugimoto et al, Biochemistry(34), 1995.
@@ -79,4 +108,4 @@ Copyright (c) 2017 Gabriele Girelli
 
 ---
 
-<small>This project comes from the [potpourri](https://github.com/ggirelli/potpourri) sandbox.</small>
+This project comes from the [potpourri](https://github.com/ggirelli/potpourri) sandbox.  \( ﾟヮﾟ)/

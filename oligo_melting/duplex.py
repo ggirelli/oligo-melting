@@ -337,14 +337,14 @@ def adj_na(tm, na_conc, fgc, na_conc_0 = None):
 
     return(Tm2)
 
-def adj_mg(tm, mg_conc, fgc, seq):
+def adj_mg(tm, mg_conc, seq):
     '''Adjust melting temperature a duplexx based on sodium concentration.
     Based on Owczarzy et al, Biochemistry(47), 2008
     
     Args:
       tm (float): melting temperature at [Mg] = 0 M.
       mg_conc (float): divalent species concentration in M.
-      fgc (float): GC content fraction.
+      seq (str): input sequence.
       
     Returns:
       float: adjusted melting temperature.
@@ -363,6 +363,7 @@ def adj_mg(tm, mg_conc, fgc, seq):
     mg_g = 8.31e-5
 
     # Adjust
+    fgc = (seq.count('G') + seq.count('C')) / float(len(seq))
     if 0 < mg_conc:
         mg_conc_log = math.log(mg_conc)
         Tm3r = 1./tm + mg_a + mg_b*mg_conc_log + fgc*(mg_c + mg_d*mg_conc_log)
@@ -373,24 +374,26 @@ def adj_mg(tm, mg_conc, fgc, seq):
 
     return(Tm3)
 
-def adj_ions(tm, na_conc, mg_conc, fgc, seq, na_conc_0 = None):
+def adj_ions(tm, na_conc, mg_conc, seq, na_conc_0 = None):
     '''Adjust melting temperature a duplexx based on ion concentration
     
     Args:
       tm (float): melting temperature.
       na_conc (float): monovalent species concentration in M.
       mg_conc (float): divalent species concentration in M.
-      fgc (float): GC content fraction.
+      seq (str): input sequence.
       
     Returns:
       float: adjusted melting temperature.
     '''
+
+    fgc = (seq.count('G') + seq.count('C')) / float(len(seq))
     
     if type(None) == type(na_conc_0):
         na_conc_0 = 1.
 
     if 0 != mg_conc:
-        return(adj_mg(tm, mg_conc, fgc, seq))
+        return(adj_mg(tm, mg_conc, seq))
     elif 0 != na_conc:
         return(adj_na(tm, na_conc, fgc, na_conc_0))
     else:
@@ -453,7 +456,7 @@ def melt_curve(seq, h, s, tm, fgc, mvalue, oligo_conc = None, na_conc = None,
             # Adjust output temperature
             t_out = adj_fa(t, h, s, seq, oligo_conc,
             	fa_conc, fa_mode, mvalue, tt_mode)
-            t_out = adj_ions(t_out, na_conc, mg_conc, fgc, seq)
+            t_out = adj_ions(t_out, na_conc, mg_conc, seq)
 
         if FA_MODE_WRIGHT2014 == fa_mode:
             # Calculate current FA m-value
@@ -463,7 +466,7 @@ def melt_curve(seq, h, s, tm, fgc, mvalue, oligo_conc = None, na_conc = None,
             k = dissoc_fraction(h, t, s, m * fa_conc, oligo_conc, tt_mode)
 
             # Adjust output temperature
-            t_out = adj_ions(t, na_conc, mg_conc, fgc, seq)
+            t_out = adj_ions(t, na_conc, mg_conc, seq)
 
         # Append melting data
         data.append((t_out, k))
@@ -602,6 +605,15 @@ def calc_tm(seq, name = None, oligo_conc = None, na_conc = None, mg_conc = None,
       curve_step (float): melting curve temperature step.
       curve_range (float): melting curve temperature range.
       curve_outpath (string): melting curve output path.
+
+    Returns:
+      (name, g, h, s, tm, seq)
+      name (str): sequence name.
+      g (float): delta Gibbs free energy.
+      h (float): delta enthalpy.
+      s (float): delta entropy.
+      tm (float): melting temperature after corrections.
+      seq (str): input sequence.
     '''
 
     # Default values -----------------------------------------------------------
@@ -682,7 +694,7 @@ def calc_tm(seq, name = None, oligo_conc = None, na_conc = None, mg_conc = None,
     # Based on Owczarzy et al, Biochemistry(47), 2008
     # -----------------------------------------------
     if 0 < mg_conc:
-        Tm4 = adj_mg(Tm2, mg_conc, fgc, seq)
+        Tm4 = adj_mg(Tm2, mg_conc, seq)
     else:
         Tm4 = Tm3
 
