@@ -19,7 +19,7 @@ with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 	long_description = f.read()
 
 setup(name='oligo_melting',
-	version='2.0.1',
+	version='2.0.1.post1',
 	description='''A Python3 package for melting temperature calculation of
 		oligonucleotides hybridization and secondary structures.''',
 	long_description=long_description,
@@ -29,7 +29,7 @@ setup(name='oligo_melting',
 	author_email='gabriele.girelli@scilifelab.se',
 	license='MIT',
 	classifiers=[
-		'Development Status :: 4 - Beta',
+		'Development Status :: 5 - Production/Stable',
 		'Intended Audience :: Science/Research',
 		'Topic :: Scientific/Engineering :: Bio-Informatics',
 		'License :: OSI Approved :: MIT License',
