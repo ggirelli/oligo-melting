@@ -12,6 +12,7 @@
 import math
 import oligo_melting as OligoMelt
 import os
+import re
 import sys
 
 # CONSTANTS ====================================================================
@@ -160,29 +161,117 @@ FA_MODE_LABELS = ["wright", "mcconaughy"]
 FA_MODE_WRIGHT2014 = FA_MODE_LABELS[0]
 FA_MODE_MCCONA1969 = FA_MODE_LABELS[1]
 
+# Default values ---------------------------------------------------------------
+
+DEFAULT_NN_LABEL = NN_LABELS[0]
+DEFAULT_OLIGO_CONC = 0.25e-6
+DEFAULT_NA_CONC = 50e-3
+DEFAULT_MG_CONC = 0
+DEFAULT_FA_CONC = 0
+DEFAULT_FA_MODE = FA_MODE_WRIGHT2014
+DEFAULT_FA_MVALUE = "0.1734"
+DEFAULT_T_CURVE_RANGE = 20
+DEFAULT_T_CURVE_STEP = 0.5
+DEFAULT_OUT_CURVE = False
+
 # FUNCTIONS ====================================================================
 
+def set_default(d, v = None):
+    '''Set variable default value.
+
+    Args:
+        d: default value.
+        v: current value.
+
+    Args:
+        d if v is None.
+    '''
+    if type(None) == type(v): return(d)
+    return(v)
+
+def get_dimers(seq):
+    '''Extract NN dimers from sequence.
+
+    Args:
+        seq (str): nucleic acid sequence.
+
+    Returns:
+        list: NN dimers.
+    '''
+    return([seq[i:(i+2)] for i in range(len(seq) - 1)])
+
+def parse_mval_string(fa_mval_s, fa_mode):
+    '''Parse formamide m-value string.
+
+    Args:
+        fa_mval_s (str): formamide m-value string.
+        fa_mode (str): formamide mode (see FA_MODE_LABELS).
+
+    Returns:
+        str, fun: formamide m-value string and function for parsing.
+    '''
+
+    # Evaluate formamide m-value
+    parsed_mval = False
+    mregex = ["(([+-]?[0-9\.]*)L([+-][0-9\.]*))", "([+-]?[0-9\.]*)"]
+
+    # Search for xL+y m-value format
+    msearch = re.search(mregex[0], fa_mval_s)
+    if not type(None) is type(msearch):
+        mgroups = msearch.groups()
+        if fa_mval_s == mgroups[0]:
+            mvalue = lambda x: float(mgroups[1]) * x + float(mgroups[2])
+            parsed_mval = True
+
+    # Search for x m-value format
+    msearch = re.search(mregex[1], fa_mval_s)
+    if not parsed_mval and not type(None) is type(msearch):
+        mgroup = msearch.groups()[0]
+        if fa_mval_s == mgroup:
+            mvalue = lambda x: float(mgroup)
+            parsed_mval = True
+
+    # Trigger error otherwise
+    if not parsed_mval:
+        msg = "!!!ERROR! Unexpected formamide m-value format Check help page."
+        sys.exit(msg)
+
+    # Fix m-value label
+    if not fa_mode in [FA_MODE_WRIGHT2014]:
+        fa_mval_s = "-"
+
+    return((fa_mval_s, mvalue))
+
 def adj_fa(tm, h, s, seq, oligo_conc,
-    fa_conc, fa_mode, mvalue, tt_mode, fa_conc_0 = None):
-    # Adjust melting temperature of a duplex based on formamide concentration.
-    # Based on Wright, Appl. env. microbiol.(80), 2014
-    # Or on McConaughy, Biochemistry(8), 1969
-    # 
-    # Args:
-    #   tm (float): melting temperature.
-    #   h (float): standard enthalpy, in kcal / mol.
-    #   s (float): standard enthropy, in kcal / (K mol).
-    #   seq (string): oligonucleotide sequence.
-    #   oligo_conc (float): oligonucleotide concentration in M.
-    #   fa_conc (float): formamide concentration in %v,v.
-    #   fa_mode (string): formamide correction lavel.
-    #   mvalue (lambda): formamide m-value function.
-    #   tt_mode (string): thermodynamic table label.
-    #   fa_conc_0 (float): initial formamide concentration in %v,v.
-    # 
-    # Returns:
-    #   float: corrected melting temperature.
+    fa_conc, fa_mode, mvalue, tt_mode = None, fa_conc_0 = None):
+    '''Adjust melting temperature of a duplex based on formamide concentration.
+    Based on Wright, Appl. env. microbiol.(80), 2014
+    Or on McConaughy, Biochemistry(8), 1969
     
+    Args:
+      tm (float): melting temperature.
+      h (float): standard enthalpy, in kcal / mol.
+      s (float): standard enthropy, in kcal / (K mol).
+      seq (string): oligonucleotide sequence.
+      oligo_conc (float): oligonucleotide concentration in M.
+      fa_conc (float): formamide concentration in %v,v.
+      fa_mode (string): formamide correction lavel.
+      mvalue (lambda): formamide m-value function.
+      tt_mode (string): thermodynamic table label.
+      fa_conc_0 (float): initial formamide concentration in %v,v.
+    
+    Returns:
+      float: corrected melting temperature.
+    '''
+    
+    # Default values -----------------------------------------------------------
+
+    # Set default values
+    tt_mode = set_default(DEFAULT_NN_LABEL, tt_mode)
+
+    # Start --------------------------------------------------------------------
+
+
     # Default initial formamide concentration
     if type(None) == type(fa_conc_0):
         fa_conc_0 = 0
@@ -209,17 +298,18 @@ def adj_fa(tm, h, s, seq, oligo_conc,
     return(tm)
 
 def adj_na(tm, na_conc, fgc, na_conc_0 = None):
-    # Adjust melting temperature of a duplexx based on sodium concentration.
-    # Based on Owczarzy et al, Biochemistry(43), 2004
-    # 
-    # Args:
-    #   tm (float): melting temperature at [Na] = 1 M.
-    #   na_conc (float): monovalent species concentration in M.
-    #   fgc (float): GC content fraction.
-    #   na_conc_0 (float): initial monovalent species concentration.
-    #   
-    # Returns:
-    #   float: adjusted melting temperature.
+    '''Adjust melting temperature of a duplexx based on sodium concentration.
+    Based on Owczarzy et al, Biochemistry(43), 2004
+    
+    Args:
+      tm (float): melting temperature at [Na] = 1 M.
+      na_conc (float): monovalent species concentration in M.
+      fgc (float): GC content fraction.
+      na_conc_0 (float): initial monovalent species concentration.
+      
+    Returns:
+      float: adjusted melting temperature.
+    '''
     
     # Default
     if type(None) is type(na_conc_0):
@@ -248,16 +338,17 @@ def adj_na(tm, na_conc, fgc, na_conc_0 = None):
     return(Tm2)
 
 def adj_mg(tm, mg_conc, fgc, seq):
-    # Adjust melting temperature a duplexx based on sodium concentration.
-    # Based on Owczarzy et al, Biochemistry(47), 2008
-    # 
-    # Args:
-    #   tm (float): melting temperature at [Mg] = 0 M.
-    #   mg_conc (float): divalent species concentration in M.
-    #   fgc (float): GC content fraction.
-    #   
-    # Returns:
-    #   float: adjusted melting temperature.
+    '''Adjust melting temperature a duplexx based on sodium concentration.
+    Based on Owczarzy et al, Biochemistry(47), 2008
+    
+    Args:
+      tm (float): melting temperature at [Mg] = 0 M.
+      mg_conc (float): divalent species concentration in M.
+      fgc (float): GC content fraction.
+      
+    Returns:
+      float: adjusted melting temperature.
+    '''
     
     # Default
     Tm3 = tm
@@ -283,16 +374,17 @@ def adj_mg(tm, mg_conc, fgc, seq):
     return(Tm3)
 
 def adj_ions(tm, na_conc, mg_conc, fgc, seq, na_conc_0 = None):
-    # Adjust melting temperature a duplexx based on ion concentration
-    # 
-    # Args:
-    #   tm (float): melting temperature.
-    #   na_conc (float): monovalent species concentration in M.
-    #   mg_conc (float): divalent species concentration in M.
-    #   fgc (float): GC content fraction.
-    #   
-    # Returns:
-    #   float: adjusted melting temperature.
+    '''Adjust melting temperature a duplexx based on ion concentration
+    
+    Args:
+      tm (float): melting temperature.
+      na_conc (float): monovalent species concentration in M.
+      mg_conc (float): divalent species concentration in M.
+      fgc (float): GC content fraction.
+      
+    Returns:
+      float: adjusted melting temperature.
+    '''
     
     if type(None) == type(na_conc_0):
         na_conc_0 = 1.
@@ -304,28 +396,44 @@ def adj_ions(tm, na_conc, mg_conc, fgc, seq, na_conc_0 = None):
     else:
         return(tm)
 
-def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
-    fgc, h, s, tm, trange, tstep, tt_mode):
-    # Generate melting curve
-    # 
-    # Args:
-    #   seq (string): oligonucleotide sequence.
-    #   oligo_conc (float): oligonucleotide concentration in M.
-    #   na_conc (float): monovalent species concentration in M.
-    #   mg_conc (float): divalent species concentration in M.
-    #   fa_conc (float): formamide concentration in %v,v.
-    #   fa_mode (string): formamide correction lavel.
-    #   mvalue (lambda): formamide m-value function.
-    #   fgc (float): GC content fraction.
-    #   h (float): standard enthalpy, in kcal / mol.
-    #   s (float): standard enthropy, in kcal / (K mol).
-    #   tm (float): melting temperature.
-    #   trange (float): melting curve temperature range.
-    #   tstep (float): melting curve temperature step.
-    #   tt_mode (string): thermodynamic table label.
-    #   
-    # Returns:
-    #   list: melting curve data (x, y)
+def melt_curve(seq, h, s, tm, fgc, mvalue, oligo_conc = None, na_conc = None,
+    mg_conc = None, fa_conc = None, fa_mode = None, trange = None, tstep = None,
+    tt_mode = None):
+    '''Generate melting curve
+    
+    Args:
+      seq (string): oligonucleotide sequence.
+      oligo_conc (float): oligonucleotide concentration in M.
+      na_conc (float): monovalent species concentration in M.
+      mg_conc (float): divalent species concentration in M.
+      fa_conc (float): formamide concentration in %v,v.
+      fa_mode (string): formamide correction lavel.
+      mvalue (lambda): formamide m-value function.
+      fgc (float): GC content fraction.
+      h (float): standard enthalpy, in kcal / mol.
+      s (float): standard enthropy, in kcal / (K mol).
+      tm (float): melting temperature.
+      trange (float): melting curve temperature range.
+      tstep (float): melting curve temperature step.
+      tt_mode (string): thermodynamic table label.
+      
+    Returns:
+      list: melting curve data (x, y)
+    '''
+
+    # Default values -----------------------------------------------------------
+
+    # Set default values
+    oligo_conc = set_default(DEFAULT_OLIGO_CONC, oligo_conc)
+    na_conc = set_default(DEFAULT_NA_CONC, na_conc)
+    mg_conc = set_default(DEFAULT_MG_CONC, mg_conc)
+    fa_conc = set_default(DEFAULT_FA_CONC, fa_conc)
+    fa_mode = set_default(DEFAULT_FA_MODE, fa_mode)
+    trange = set_default(DEFAULT_T_CURVE_STEP, curve_range)
+    tstep = set_default(DEFAULT_T_CURVE_RANGE, curve_step)
+    tt_mode = set_default(DEFAULT_NN_LABEL, tt_mode)
+
+    # Start --------------------------------------------------------------------
     
     # Empty list for melting table
     data = []
@@ -340,7 +448,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
     while t <= tm + trange / 2.:
         if FA_MODE_MCCONA1969 == fa_mode:
             # Calculate dissociated fraction
-            k = dissoc_fraction(h, t, s, oligo_conc, tt_mode, 0)
+            k = dissoc_fraction(h, t, s, 0, oligo_conc, tt_mode)
 
             # Adjust output temperature
             t_out = adj_fa(t, h, s, seq, oligo_conc,
@@ -352,7 +460,7 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
             m = mvalue(len(seq))
 
             # Calculate dissociated fraction
-            k = dissoc_fraction(h, t, s, oligo_conc, tt_mode, m * fa_conc)
+            k = dissoc_fraction(h, t, s, m * fa_conc, oligo_conc, tt_mode)
 
             # Adjust output temperature
             t_out = adj_ions(t, na_conc, mg_conc, fgc, seq)
@@ -366,19 +474,28 @@ def melt_curve(seq, oligo_conc, na_conc, mg_conc, fa_conc, fa_mode, mvalue,
     # Return melting table
     return(data)
 
-def dissoc_fraction(h, t, s, oligo_conc, tt_mode, gplus):
-    # Calculate duplex dissociated fraction at given temperature.
-    # 
-    # Args:
-    #   h (float): enthalpy.
-    #   t (float): current temperature.
-    #   s (float): enthropy.
-    #   oligo_conc (float): oligo concentration in M.
-    #   tt_mode (string): N-N thermodynamic approach.
-    #   gplus (float): additional free energy by solvent denaturant.
-    # 
-    # Returns:
-    #   float: dissociated fraction.
+def dissoc_fraction(h, t, s, gplus, oligo_conc = None, tt_mode = None):
+    '''Calculate duplex dissociated fraction at given temperature.
+    
+    Args:
+      h (float): enthalpy.
+      t (float): current temperature.
+      s (float): enthropy.
+      oligo_conc (float): oligo concentration in M.
+      tt_mode (string): N-N thermodynamic approach.
+      gplus (float): additional free energy by solvent denaturant.
+    
+    Returns:
+      float: dissociated fraction.
+    '''
+
+    # Default values -----------------------------------------------------------
+
+    # Set default values
+    oligo_conc = set_default(DEFAULT_OLIGO_CONC, oligo_conc)
+    tt_mode = set_default(DEFAULT_NN_LABEL, tt_mode)
+
+    # Start --------------------------------------------------------------------
     
     # Calculate free energy
     dg = h - t * s + gplus
@@ -395,22 +512,34 @@ def dissoc_fraction(h, t, s, oligo_conc, tt_mode, gplus):
     # Output
     return(k)
 
-def calc_tm_std(seq, tt_mode, couples, oligo_conc):
-    # Calculate melting temperature of a duplex at standard 1 M NaCl (monovalent
-    # ions conc). Based on SantaLucia, PNAS(95), 1998
-    # 
-    # Args:
-    #   seq (string): oligonucleotide sequence.
-    #   tt_mode (string): thermodynamic table label.
-    #   couples (list): list of base dimers.
-    #   oligo_conc (float): oligonucleotide concentration in M.
-    # 
-    # Returns:
-    #   tuple: hybridization enthalpy, enthropy and melting temperature.
+def calc_tm_std(seq, tt_mode = None, couples = None, oligo_conc = None):
+    '''Calculate melting temperature of a duplex at standard 1 M NaCl
+    (monovalent ions conc). Based on SantaLucia, PNAS(95), 1998
     
+    Args:
+      seq (string): oligonucleotide sequence.
+      tt_mode (string): thermodynamic table label.
+      couples (list): list of base dimers.
+      oligo_conc (float): oligonucleotide concentration in M.
+    
+    Returns:
+      tuple: hybridization enthalpy, enthropy and melting temperature.
+    '''
+    
+    # Default values -----------------------------------------------------------
+
+    # Set default values
+    oligo_conc = set_default(DEFAULT_OLIGO_CONC, oligo_conc)
+    tt_mode = set_default(DEFAULT_NN_LABEL, tt_mode)
+    if type(None) == type(couples):
+        couples = get_dimers(seq)
+
+    # Build upon input ---------------------------------------------------------
 
     # Select thermodynamic table
     tt = NN_TABLES[tt_mode]
+
+    # Start --------------------------------------------------------------------
     
     # Standard 1 M NaCl
     na_conc_0 = 1.
@@ -453,31 +582,60 @@ def calc_tm_std(seq, tt_mode, couples, oligo_conc):
     # Output
     return((h, s, tm))
 
-def calc_tm(name, seq, oligo_conc, na_conc, mg_conc,
-	fa_conc, fa_mode, fa_mval_s, mvalue,
-    tt_mode, celsius, is_verbose,
-    do_curve, curve_step, curve_range, curve_outpath):
-    # Calculate melting temperature of provided oligo duplex sequence.
-    # 
-    # Args:
-    #   seq (string): oligonucleotide sequence.
-    #   oligo_conc (float): oligonucleotide concentration in M.
-    #   na_conc (float): monovalent species concentration in M.
-    #   mg_conc (float): divalent species concentration in M.
-    #   fa_conc (float): formamide concentration in %v,v.
-    #   fa_mode (string): formamide correction lavel.
-    #   fa_mval_s (string): formamide m-value string.
-    #   mvalue (lambda): formamide m-value function.
-    #   tt_mode (string): thermodynamic table label.
-    #   celsius (bool): convert K to degC.
-    #   is_verbose (bool): be verbose.
-    #   do_curve (bool): generate melting curve.
-    #   curve_step (float): melting curve temperature step.
-    #   curve_range (float): melting curve temperature range.
-    #   curve_outpath (string): melting curve output path.
+def calc_tm(seq, name = None, oligo_conc = None, na_conc = None, mg_conc = None,
+	fa_conc = None, fa_mode = None, fa_mval_s = None,
+    tt_mode = None, celsius = None, is_verbose = None,
+    curve_step = None, curve_range = None, curve_outpath = None, silent = None):
+    '''Calculate melting temperature of provided oligo duplex sequence.
+    
+    Args:
+      seq (string): oligonucleotide sequence.
+      oligo_conc (float): oligonucleotide concentration in M.
+      na_conc (float): monovalent species concentration in M.
+      mg_conc (float): divalent species concentration in M.
+      fa_conc (float): formamide concentration in %v,v.
+      fa_mode (string): formamide correction lavel.
+      fa_mval_s (string): formamide m-value string.
+      tt_mode (string): thermodynamic table label.
+      celsius (bool): convert K to degC.
+      is_verbose (bool): be verbose.
+      curve_step (float): melting curve temperature step.
+      curve_range (float): melting curve temperature range.
+      curve_outpath (string): melting curve output path.
+    '''
+
+    # Default values -----------------------------------------------------------
+
+    # Set default values
+    name = set_default("seq", name)
+    oligo_conc = set_default(DEFAULT_OLIGO_CONC, oligo_conc)
+    na_conc = set_default(DEFAULT_NA_CONC, na_conc)
+    mg_conc = set_default(DEFAULT_MG_CONC, mg_conc)
+    fa_conc = set_default(DEFAULT_FA_CONC, fa_conc)
+    fa_mode = set_default(DEFAULT_FA_MODE, fa_mode)
+    fa_mval_s = set_default(DEFAULT_FA_MVALUE, fa_mval_s)
+    tt_mode = set_default(DEFAULT_NN_LABEL, tt_mode)
+    celsius = set_default(False, celsius)
+    is_verbose = set_default(False, is_verbose)
+    curve_step = set_default(DEFAULT_T_CURVE_RANGE, curve_step)
+    curve_range = set_default(DEFAULT_T_CURVE_STEP, curve_range)
+    curve_outpath = set_default(DEFAULT_OUT_CURVE, curve_outpath)
+    silent = set_default(True, silent)
+
+    # Build upon input ---------------------------------------------------------
+
+    # Remove output curve file if it exists
+    do_curve = False != curve_outpath
+    if do_curve and os.path.isfile(curve_outpath):
+        os.remove(curve_outpath)
+
+    # Parse formamide mvalue string
+    fa_mval_s, mvalue = parse_mval_string(fa_mval_s, fa_mode)
 
     # Select thermodynamic table
     tt = NN_TABLES[tt_mode]
+
+    # Start --------------------------------------------------------------------
 
     # Make string uppercase
     seq = seq.upper()
@@ -498,7 +656,7 @@ def calc_tm(name, seq, oligo_conc, na_conc, mg_conc,
             return
 
     # Make NN couples
-    couples = [seq[i:(i+2)] for i in range(len(seq) - 1)]
+    couples = get_dimers(seq)
 
     # Calculate GC content
     fgc = (seq.count('G') + seq.count('C')) / float(len(seq))
@@ -537,9 +695,8 @@ def calc_tm(name, seq, oligo_conc, na_conc, mg_conc,
             msg += "\n          Path: %s" % curve_outpath
             sys.exit(msg)
         fout = open(curve_outpath, 'a+')
-        tab = melt_curve(seq, oligo_conc, na_conc, mg_conc,
-        	fa_conc, fa_mode, mvalue, fgc, h, s, Tm1,
-        	curve_range, curve_step, tt_mode)
+        tab = melt_curve(seq, h, s, Tm1, fgc, mvalue, oligo_conc, na_conc,
+            mg_conc, fa_conc, fa_mode, curve_range, curve_step, tt_mode)
         for (t, k) in tab:
             if celsius:
                 fout.write("%s\t%f\t%f\n" % (name, t - 273.15, k))
@@ -551,12 +708,15 @@ def calc_tm(name, seq, oligo_conc, na_conc, mg_conc,
     # ----------
 
     g = h - (37 + 273.15) * s
+
     if not is_verbose:
         if celsius:
             Tm4 -= 273.15
-        print("%s\t%f\t%f\t%f\t%f\t%s" % (name, g, h, s, Tm4, seq))
+        output = (name, g, h, s, Tm4, seq)
+        if not silent: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
+        return(output)
     else:
-        print("""
+        output = """
              Oligo label : %s
           Oligo sequence : %s
               GC-content : %.0f%%
@@ -595,7 +755,9 @@ def calc_tm(name, seq, oligo_conc, na_conc, mg_conc,
             fa_conc, Tm2, Tm2 - 273.15,
             na_conc, Tm3, Tm3 - 273.15,
             mg_conc, Tm4, Tm4 - 273.15,
-        ))
+        )
+        if not silent: print(output)
+        return(output)
 
 # END ==========================================================================
 

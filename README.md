@@ -25,23 +25,32 @@ Usage
 
 #### Duplexes
 
-The `melt_duplex.py` script, implemented in Python, allows to calculate the melting temperature of a nucleic acid duplex, provided the sequence of one of the two strands.
+The `melt_duplex` command allows to calculate the melting temperature of a nucleic acid duplex, provided the sequence of one of the two strands.
 
 The hybridization delta free energy calculation is based on the N-N thermodynamic values in literature and is available for DNA:DNA[^3], RNA:RNA[^1] and DNA:RNA[^2] duplexes. The melting temperature calculation is based on Santalucia, 1998[^4]. Sodium and cagnesium concentration correction is based on the work of Owczarzy et al[^5][^6]. Formamide correction can be performed based on two different published models[^7][^8].
 
 * Use the `-t` option to specify the **type of nucleic acid duplex**.
 * Use `--fa-mode` to switch between linear melting temperature **formamide-based correction**[^7] and linear &delta;G formamide-based correction[^8].
 * Use `--fa-mvalue` together with `--fa-mode wright` to specify the **m-value** for the formamide-based correction.
-* Use the `-F` option and providing the path to a **fasta file** instead of a single sequence, the melting temperature is automatically calculated for every sequence in the file.
+* Provide the path to a **fasta file** instead of a single sequence to calculate the melting temperature of every sequence in the file.
 * Use the `-v` option to trigger the verbose mode, which provides more **details** for every single sequence.
 * Use `-C` for the temperature in **degree Celsius** instead of Kelvin.
 * Use `--out-curve` to specify a file where to save estimated single-sequence **melting curves** with temperature range and step around the melting temperature as defined with `--t-curve`.
 
 #### Secondary structure
 
-The `melt_second.py` script, implemented in Python, allows to correct the melting temperature of a nucleic acid secondary structure, previously calculated with OligoArrayAux, and to produce the corresponding melting curves.
+The `melt_second` script allows to correct the melting temperature of a nucleic acid secondary structure, previously calculated with OligoArrayAux, and to produce the corresponding melting curves.
 
 ### As a library
+
+Import the package and use the corresponding functions.
+
+```python3
+import oligo_melting as OligoMelt
+
+seq = "CAGTCAGTCGATC"
+OligoMelt.Duplex.calc_tm(seq)
+```
 
 The `meltlib.py` function library (available in `/lib/`) contains all the functions necessary to calculate and/or correct a duplex melting temperature based on a number of parameters.
 

@@ -28,7 +28,6 @@
 
 import argparse
 import os
-import re
 import sys
 
 import oligo_melting as OligoMelt
@@ -63,52 +62,54 @@ parser.add_argument('-t', '--type', type = str, nargs = 1,
     or RNA:DNA (based on ref.2, given RNA sequence). The first nucleic acid type
     indicates the provided sequence.''',
     choices = OligoMelt.Duplex.NN_LABELS,
-    default = [OligoMelt.Duplex.NN_LABELS[0]])
+    default = [OligoMelt.Duplex.DEFAULT_NN_LABEL])
 parser.add_argument('-o', '--oconc', metavar = "oligo_conc",
     type = float, nargs = 1,
     help = '''Oligonucleotide concentration [M].
-    Default: 0.25e-6 M''',
-    default = [0.25e-6])
+    Default: %.2E M''' % OligoMelt.Duplex.DEFAULT_OLIGO_CONC,
+    default = [OligoMelt.Duplex.DEFAULT_OLIGO_CONC])
 parser.add_argument('-n', '--naconc', metavar = "na_conc",
     type = float, nargs = 1,
     help = '''Na+ concentration [M].
-    Default: 50e-3 M''',
-    default = [50e-3])
+    Default: %.2E M''' % OligoMelt.Duplex.DEFAULT_NA_CONC,
+    default = [OligoMelt.Duplex.DEFAULT_NA_CONC])
 parser.add_argument('-m', '--mgconc', metavar = "mg_conc",
     type = float, nargs = 1,
     help = '''Mg2+ concentration [M]. Note: Mg2+ correction overwrites Na+
-    correction. Default: 0 M''',
-    default = [0])
+    correction. Default: %.2E M''' % OligoMelt.Duplex.DEFAULT_MG_CONC,
+    default = [OligoMelt.Duplex.DEFAULT_MG_CONC])
 parser.add_argument('-f', '--faconc', type = float, nargs = 1,
-    metavar = 'fa_conc', help = '''Formamide concentration in %%(v,v).''',
-    default = [0])
+    metavar = 'fa_conc', help = '''Formamide concentration in perc.v,v.
+    Default: %.2f''' % OligoMelt.Duplex.DEFAULT_FA_CONC,
+    default = [OligoMelt.Duplex.DEFAULT_FA_CONC])
 parser.add_argument('--fa-mode', type = str, nargs = 1,
     metavar = 'fa_mode', help = '''Mode of formamide correction. "mcconaughy"
     for classical -0.72%%FA correction from ref. 7, "wright" for single reaction
     model correction from ref.8 (default).''',
     choices = OligoMelt.Duplex.FA_MODE_LABELS,
-    default = [OligoMelt.Duplex.FA_MODE_WRIGHT2014])
+    default = [OligoMelt.Duplex.DEFAULT_FA_MODE])
 parser.add_argument('--fa-mvalue', type = str, nargs = 1, metavar = 'm',
     help = '''Specify the formamide m-value to be used with the wright
     correction model. Use either a single value "x" or two values "xL+y" where
-    L is the probe length. Default: 0.1734''', default = ["0.1734"])
+    L is the probe length. Default: %s''' % OligoMelt.Duplex.DEFAULT_FA_MVALUE,
+    default = [OligoMelt.Duplex.DEFAULT_FA_MVALUE])
 parser.add_argument('--t-curve', type = float, nargs = 2,
     metavar = ('range', 'step'), help = '''Temperature range and step for
     melting curve generation. Use --make-curve option to generate the curve.
-    Default: 20 degC range and 0.5 degC step.''', default = [20, 0.5])
+    Default: %.1f degC range and %.2f degC step.
+    ''' % (OligoMelt.Duplex.DEFAULT_T_CURVE_RANGE,
+        OligoMelt.Duplex.DEFAULT_T_CURVE_STEP), default = [
+        OligoMelt.Duplex.DEFAULT_T_CURVE_RANGE,
+        OligoMelt.Duplex.DEFAULT_T_CURVE_STEP])
 parser.add_argument('--out-curve', type = str, nargs = 1, metavar = "outname",
     help = '''Path to output table containing tabulated curves.''',
-    default = [False])
+    default = [OligoMelt.Duplex.DEFAULT_OUT_CURVE])
 
 # Add flags
 parser.add_argument('-C', '--celsius',
     dest = 'celsius', action = 'store_const',
     const = True, default = False,
     help = 'Output temperature in Celsius degrees. Default: Kelvin')
-parser.add_argument('-F', '--usefile',
-    dest = 'usefile', action = 'store_const',
-    const = True, default = False,
-    help = 'Use when a file path is provided instead of a single sequence.')
 parser.add_argument('-v', '--verbose',
     dest = 'verbose', action = 'store_const',
     const = True, default = False,
@@ -134,7 +135,7 @@ tt_mode = args.type[0]
 celsius = args.celsius
 
 # File as input
-use_file = args.usefile
+use_file = os.path.isfile(seq)
 
 # Verbose mode
 is_verbose = args.verbose
@@ -143,7 +144,6 @@ is_verbose = args.verbose
 curve_range = args.t_curve[0]
 curve_step = args.t_curve[1]
 curve_outpath = args.out_curve[0]
-do_curve = False != curve_outpath
 
 # Formamide
 fa_conc = args.faconc[0]
@@ -157,38 +157,6 @@ if curve_step > curve_range / 2:
     sys.exit("!!!ERROR! Curve step must be smaller than curve range.")
 curve_range -= curve_range % curve_step
 
-# Remove output curve file if it exists
-if do_curve and os.path.isfile(curve_outpath):
-    os.remove(curve_outpath)
-
-# Evaluate formamide m-value
-parsed_mval = False
-mregex = ["(([+-]?[0-9\.]*)L([+-][0-9\.]*))", "([+-]?[0-9\.]*)"]
-
-# Search for xL+y m-value format
-msearch = re.search(mregex[0], fa_mval_s)
-if not type(None) is type(msearch):
-    mgroups = msearch.groups()
-    if fa_mval_s == mgroups[0]:
-        mvalue = lambda x: float(mgroups[1]) * x + float(mgroups[2])
-        parsed_mval = True
-
-# Search for x m-value format
-msearch = re.search(mregex[1], fa_mval_s)
-if not parsed_mval and not type(None) is type(msearch):
-    mgroup = msearch.groups()[0]
-    if fa_mval_s == mgroup:
-        mvalue = lambda x: float(mgroup)
-        parsed_mval = True
-
-# Trigger error otherwise
-if not parsed_mval:
-    sys.exit("!!!ERROR! Unexpected formamide m-value format Check help page.")
-
-# Fix m-value label
-if not fa_mode in ["wright"]:
-    fa_mval_s = "-"
-
 # FUNCTIONS ====================================================================
 
 # RUN ==========================================================================
@@ -201,14 +169,13 @@ data = {
     'fa_conc' : fa_conc,
     'fa_mode' : fa_mode,
     'fa_mval_s' : fa_mval_s,
-    'mvalue' : mvalue,
     'tt_mode' : tt_mode,
     'celsius' : celsius,
     'is_verbose' : is_verbose,
-    'do_curve' : do_curve,
     'curve_step' : curve_step,
     'curve_range' : curve_range,
-    'curve_outpath' : curve_outpath
+    'curve_outpath' : curve_outpath,
+    'silent' : False
 }
 
 # CALCULATE --------------------------------------------------------------------
@@ -230,8 +197,7 @@ else:
             if ">" == row[0]:
                 if not 0 == len(curr_seq) and not 0 == len(curr_head):
                     # Calculate before moving to the next item
-                    if " " in curr_head:
-                        curr_head = curr_head.split(" ")[0]
+                    if " " in curr_head: curr_head = curr_head.split(" ")[0]
                     data['name'] = curr_head
                     data['seq'] = curr_seq
                     OligoMelt.Duplex.calc_tm(**data)
@@ -242,6 +208,7 @@ else:
                 curr_seq += row.strip()
 
     # Calculate for last item
+    if " " in curr_head: curr_head = curr_head.split(" ")[0]
     data['name'] = curr_head
     data['seq'] = curr_seq
     OligoMelt.Duplex.calc_tm(**data)
