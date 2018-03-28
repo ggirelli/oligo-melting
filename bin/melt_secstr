@@ -39,7 +39,7 @@ Corrects melting temperature of a secondary structure, predicted with
 OligoArrayAux, based on formamide concentration. References:
  [1] McConaughy et al, Biochemistry(8), 1969;
  [2] Wright et al, Appl. env. microbiol.(80), 2014.
-''', formatter_class = argparse.RawDescriptionHelpFormatter))
+''', formatter_class = argparse.RawDescriptionHelpFormatter)
 
 # Add mandatory arguments
 parser.add_argument('FILE', type = str, nargs = 1, help = '''
