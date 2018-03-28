@@ -5,11 +5,13 @@
 # 
 # Author: Gabriele Girelli
 # Email: gigi.ga90@gmail.com
-# Version: 1.4.4
 # Date: 20171026
 # Project: oligo characterization
 # Description: correct melting temperature of secondary structures and produce
 #              melting curves.
+# 
+# Changelog:
+#  v2.0.0 - 2018-03-28: first release withing pypi package.
 # 
 # References:
 #  [1] McConaughy et al, Biochemistry(8), 1969;
@@ -61,6 +63,11 @@ parser.add_argument('-C', '--celsius',
     dest = 'celsius', action = 'store_const',
     const = True, default = False,
     help = 'Output temperature in Celsius degrees. Default: Kelvin')
+
+# Version flag
+version = "2.0.0"
+parser.add_argument('--version', action = 'version',
+    version = '%s v%s' % (sys.argv[0], version,))
 
 # Parse arguments
 args = parser.parse_args()

@@ -5,10 +5,12 @@
 # 
 # Author: Gabriele Girelli
 # Email: gigi.ga90@gmail.com
-# Version: 1.4.4
 # Date: 20170711
 # Project: oligo characterization
 # Description:  calculate melting temperature of a provide NA duplex
+# 
+# Changelog:
+#  v2.0.0 - 2018-03-28: first release withing pypi package.
 # 
 # References:
 #  [1] Freier et al, PNAS(83), 1986;
@@ -114,6 +116,11 @@ parser.add_argument('-v', '--verbose',
     dest = 'verbose', action = 'store_const',
     const = True, default = False,
     help = 'Verbose output.')
+
+# Version flag
+version = "2.0.0"
+parser.add_argument('--version', action = 'version',
+    version = '%s v%s' % (sys.argv[0], version,))
 
 # Parse arguments
 args = parser.parse_args()
