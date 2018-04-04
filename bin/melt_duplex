@@ -220,11 +220,10 @@ else:
                 fields = dict(re.findall(r'(tm):(.*?);', record.description))
                 if "tm" in fields.keys():
                     record.description = re.sub(r'(tm):(.*?);',
-                        'tm=%.2f;' % output[4], record.description)
-                    print(">%s\n%s" % (record.description, record.seq))
+                        'tm:%.2f;' % output[4], record.description)
                 else:
-                    print(">%s tm:%.2f;\n%s" % (
-                        record.description, output[4], record.seq))
+                    record.description += " tm:%.2f;" % output[4]
+                print(record.format("fasta").strip())
             else:
                 print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
