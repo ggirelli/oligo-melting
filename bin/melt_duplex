@@ -29,7 +29,9 @@
 # DEPENDENCIES =================================================================
 
 import argparse
+from Bio import SeqIO
 import os
+import re
 import sys
 
 import oligo_melting as OligoMelt
@@ -40,8 +42,7 @@ import oligo_melting as OligoMelt
 parser = argparse.ArgumentParser(
     description = '''
 Calculate melting temperature of a DNA duplex at provided [oligo],
-[Na+], [Mg2+]. Either provide an oligo sequence or a file with one oligo
-per line (and use -F option). References:
+[Na+], [Mg2+]. Either provide an oligo sequence or a FASTA file. References:
  [1] Freier et al, PNAS(83), 1986;
  [2] Sugimoto et al, Biochemistry(34), 1995.
  [3] Allawi & Santalucia, Biochemistry(36), 1997;
@@ -112,6 +113,10 @@ parser.add_argument('-C', '--celsius',
     dest = 'celsius', action = 'store_const',
     const = True, default = False,
     help = 'Output temperature in Celsius degrees. Default: Kelvin')
+parser.add_argument('-F', '--fasta-like',
+    dest = 'fastaLike', action = 'store_const',
+    const = True, default = False,
+    help = 'Output in FASTA format.')
 parser.add_argument('-v', '--verbose',
     dest = 'verbose', action = 'store_const',
     const = True, default = False,
@@ -157,6 +162,11 @@ fa_conc = args.faconc[0]
 fa_mode = args.fa_mode[0]
 fa_mval_s = args.fa_mvalue[0]
 
+# Output format
+fasta_like = args.fastaLike
+if fasta_like: silent = True
+else: silent = False
+
 # Additional checks ------------------------------------------------------------
 
 # Check proper curve step/range pair
@@ -182,43 +192,42 @@ data = {
     'curve_step' : curve_step,
     'curve_range' : curve_range,
     'curve_outpath' : curve_outpath,
-    'silent' : False
+    'silent' : silent
 }
 
 # CALCULATE --------------------------------------------------------------------
+
+if not is_verbose and not silent:
+    print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
 if not use_file:
     # Single sequence case
     data['name'] = 'seq'
     data['seq'] = seq
-    OligoMelt.Duplex.calc_tm(**data)
+    output = OligoMelt.Duplex.calc_tm(**data)
+    if fasta_like:
+        print(">seq tm:%.2f;\n%s" % (output[4], seq))
+    else:
+        print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 else:
-    if not is_verbose:
-        print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
+    with open(seq, "r") as fin:
+        for record in SeqIO.parse(fin, "fasta"):
+            data['name'] = record.name
+            data['seq'] = str(record.seq)
+            output = OligoMelt.Duplex.calc_tm(**data)
 
-    # Input file case
-    curr_head = ""
-    curr_seq = ""
-    with open(seq) as fin:
-        for row in fin:
-            if ">" == row[0]:
-                if not 0 == len(curr_seq) and not 0 == len(curr_head):
-                    # Calculate before moving to the next item
-                    if " " in curr_head: curr_head = curr_head.split(" ")[0]
-                    data['name'] = curr_head
-                    data['seq'] = curr_seq
-                    OligoMelt.Duplex.calc_tm(**data)
-
-                curr_head = row[1:].strip()
-                curr_seq = ""
+            if fasta_like:
+                fields = dict(re.findall(r'(tm):(.*?);', record.description))
+                if "tm" in fields.keys():
+                    record.description = re.sub(r'(tm):(.*?);',
+                        'tm=%.2f;' % output[4], record.description)
+                    print(">%s\n%s" % (record.description, record.seq))
+                else:
+                    print(">%s tm:%.2f;\n%s" % (
+                        record.description, output[4], record.seq))
             else:
-                curr_seq += row.strip()
+                print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
-    # Calculate for last item
-    if " " in curr_head: curr_head = curr_head.split(" ")[0]
-    data['name'] = curr_head
-    data['seq'] = curr_seq
-    OligoMelt.Duplex.calc_tm(**data)
 
 # END ==========================================================================
 
