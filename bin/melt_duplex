@@ -107,6 +107,9 @@ parser.add_argument('--t-curve', type = float, nargs = 2,
 parser.add_argument('--out-curve', type = str, nargs = 1, metavar = "outname",
     help = '''Path to output table containing tabulated curves.''',
     default = [OligoMelt.Duplex.DEFAULT_OUT_CURVE])
+parser.add_argument('-d', '--delim', type = str, nargs = 1, metavar = "sep",
+    help = '''Delimiter between key and value in FASTA header description.
+    Default: "="''', default = ["="])
 
 # Add flags
 parser.add_argument('-C', '--celsius',
@@ -130,49 +133,12 @@ parser.add_argument('--version', action = 'version',
 # Parse arguments
 args = parser.parse_args()
 
-# Assign to in-script variables ------------------------------------------------
-
-# Input oligo
-seq = args.seq[0]
-
-# Concentrations
-oligo_conc = args.oconc[0]
-na_conc = args.naconc[0]
-mg_conc = args.mgconc[0]
-
-# Thermodynamic table
-tt_mode = args.type[0]
-
-# Temperature units
-celsius = args.celsius
-
-# File as input
-use_file = os.path.isfile(seq)
-
-# Verbose mode
-is_verbose = args.verbose
-
-# Melting curve
-curve_range = args.t_curve[0]
-curve_step = args.t_curve[1]
-curve_outpath = args.out_curve[0]
-
-# Formamide
-fa_conc = args.faconc[0]
-fa_mode = args.fa_mode[0]
-fa_mval_s = args.fa_mvalue[0]
-
-# Output format
-fasta_like = args.fastaLike
-if fasta_like: silent = True
-else: silent = False
-
 # Additional checks ------------------------------------------------------------
 
 # Check proper curve step/range pair
-if curve_step > curve_range / 2:
-    sys.exit("!!!ERROR! Curve step must be smaller than curve range.")
-curve_range -= curve_range % curve_step
+assert_msg = "curve step must be smaller than curve range."
+assert args.t_curve[1] <= args.t_curve[0] / 2, assert_msg
+args.t_curve[0] -= args.t_curve[0] % args.t_curve[1]
 
 # FUNCTIONS ====================================================================
 
@@ -196,10 +162,11 @@ def run_seq(seq, **kwargs):
 
     # Print output
     print_header(fasta_like = fasta_like, **kwargs)
-    if fasta_like: print(">seq tm:%.2f;\n%s" % (output[4], seq))
+    d = kwargs['fasta_delim']
+    if fasta_like: print(">seq tm%s%.2f;\n%s" % (d, output[4], seq))
     else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
-def run_fasta(fpath, fasta_like, **kwargs):
+def run_fasta(fpath, **kwargs):
     '''Analyze each record in a FASTA file.
 
     Args:
@@ -212,7 +179,7 @@ def run_fasta(fpath, fasta_like, **kwargs):
     IH = open(fpath, "r")
 
     # Iterate FASTA records
-    print_header(fasta_like = fasta_like, **kwargs)
+    print_header(**kwargs)
     for record in SimpleFastaParser(IH):
         record = list(record)
         kwargs.update([('name', record[0].split(" ")[0]), ('seq', record[1])])
@@ -221,14 +188,15 @@ def run_fasta(fpath, fasta_like, **kwargs):
         output = OligoMelt.Duplex.calc_tm(**kwargs)
 
         # Prepare output
-        if fasta_like:
+        if kwargs['fasta_like']:
+            d = kwargs['fasta_delim']
 
             # Add Tm field to record header
-            fields = dict(re.findall(r'(tm):(.*?);', record[0]))
+            fields = dict(re.findall(r'(tm)%s(.*?);' % d, record[0]))
             if "tm" in fields.keys():
-                record[0] = re.sub(r'(tm):(.*?);',
-                    'tm:%.2f;' % output[4], record[0])
-            else: record[0] += " tm:%.2f;" % output[4]
+                record[0] = re.sub(r'(tm)%s(.*?);' % d,
+                    'tm%s%.2f;' % output[4], record[0])
+            else: record[0] += " tm%s%.2f;" % (d, output[4])
 
             # Output
             print(">%s\n%s" % tuple(record))
@@ -241,25 +209,27 @@ def run_fasta(fpath, fasta_like, **kwargs):
 
 # Build argument dictionary
 data = {
-    'oligo_conc' : oligo_conc,
-    'na_conc' : na_conc,
-    'mg_conc' : mg_conc,
-    'fa_conc' : fa_conc,
-    'fa_mode' : fa_mode,
-    'fa_mval_s' : fa_mval_s,
-    'tt_mode' : tt_mode,
-    'celsius' : celsius,
-    'is_verbose' : is_verbose,
-    'curve_step' : curve_step,
-    'curve_range' : curve_range,
-    'curve_outpath' : curve_outpath,
-    'silent' : silent
+    'oligo_conc' : args.oconc[0],
+    'na_conc' : args.naconc[0],
+    'mg_conc' : args.mgconc[0],
+    'fa_conc' : args.faconc[0],
+    'fa_mode' : args.fa_mode[0],
+    'fa_mval_s' : args.fa_mvalue[0],
+    'tt_mode' : args.type[0],
+    'celsius' : args.celsius,
+    'is_verbose' : args.verbose,
+    'curve_step' : args.t_curve[1],
+    'curve_range' : args.t_curve[0],
+    'curve_outpath' : args.out_curve[0],
+    'fasta_like' : args.fastaLike,
+    'fasta_delim' : args.delim[0],
+    'silent' : args.fastaLike
 }
 
 # CALCULATE --------------------------------------------------------------------
 
-if not use_file: run_seq(seq, **data)
-else: run_fasta(seq, fasta_like, **data)
+if os.path.isfile(args.seq[0]): run_fasta(args.seq[0], **data)
+else: run_seq(args.seq[0], **data)
 
 
 # END ==========================================================================

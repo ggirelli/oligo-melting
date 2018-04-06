@@ -586,9 +586,9 @@ def calc_tm_std(seq, tt_mode = None, couples = None, oligo_conc = None):
     return((h, s, tm))
 
 def calc_tm(seq, name = None, oligo_conc = None, na_conc = None, mg_conc = None,
-	fa_conc = None, fa_mode = None, fa_mval_s = None,
-    tt_mode = None, celsius = None, is_verbose = None,
-    curve_step = None, curve_range = None, curve_outpath = None, silent = None):
+	fa_conc = None, fa_mode = None, fa_mval_s = None, tt_mode = None,
+    celsius = None, is_verbose = None, curve_step = None, curve_range = None,
+    curve_outpath = None, silent = None, **kwargs):
     '''Calculate melting temperature of provided oligo duplex sequence.
     
     Args:
