@@ -30,6 +30,7 @@
 
 import argparse
 from Bio import SeqIO
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 import os
 import re
 import sys
@@ -176,6 +177,66 @@ curve_range -= curve_range % curve_step
 
 # FUNCTIONS ====================================================================
 
+def print_header(**kwa):
+    if not kwa['is_verbose'] and not kwa['silent'] and not kwa['fasta_like']:
+        print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
+
+def run_seq(seq, **kwargs):
+    '''Analyze single sequence.
+
+    Args:
+        seq (str): nucleic acid sequence.
+        kwargs (dict): additional shared arguments.
+    '''
+
+    # Update shared params
+    kwargs.update([('name', 'seq'), ('seq', seq)])
+
+    # Calculate Tm
+    output = OligoMelt.XDuplex.calc_tm(**kwargs)
+
+    # Print output
+    print_header(fasta_like = fasta_like, **kwargs)
+    if fasta_like: print(">seq tm:%.2f;\n%s" % (output[4], seq))
+    else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
+
+def run_fasta(fpath, fasta_like, **kwargs):
+    '''Analyze each record in a FASTA file.
+
+    Args:
+        fpath (str): path to input FASTA file.
+        fasta_like (bool): format output as FASTA file.
+        kwargs (dict)L additional shared arguments.
+    '''
+
+    # Open connection to input file
+    IH = open(fpath, "r")
+
+    # Iterate FASTA records
+    print_header(fasta_like = fasta_like, **kwargs)
+    for record in SeqIO.SimpleFastaParser(IH):
+        kwargs.update([('name', record[0].split(" ")[0]), ('seq', record[1])])
+
+        # Calculate Tm
+        output = OligoMelt.Duplex.calc_tm(**data)
+
+        # Prepare output
+        if fasta_like:
+
+            # Add Tm field to record header
+            fields = dict(re.findall(r'(tm):(.*?);', record[0]))
+            if "tm" in fields.keys():
+                record[0] = re.sub(r'(tm):(.*?);',
+                    'tm:%.2f;' % output[4], record[0])
+            else: record[0] += " tm:%.2f;" % output[4]
+
+            # Output
+            print(record.format("fasta").strip())
+        else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
+
+    # Close connection to input file
+    ih.close()
+
 # RUN ==========================================================================
 
 # Build argument dictionary
@@ -200,32 +261,8 @@ data = {
 if not is_verbose and not silent:
     print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
-if not use_file:
-    # Single sequence case
-    data['name'] = 'seq'
-    data['seq'] = seq
-    output = OligoMelt.Duplex.calc_tm(**data)
-    if fasta_like:
-        print(">seq tm:%.2f;\n%s" % (output[4], seq))
-    else:
-        print("%s\t%f\t%f\t%f\t%f\t%s" % output)
-else:
-    with open(seq, "r") as fin:
-        for record in SeqIO.parse(fin, "fasta"):
-            data['name'] = record.name
-            data['seq'] = str(record.seq)
-            output = OligoMelt.Duplex.calc_tm(**data)
-
-            if fasta_like:
-                fields = dict(re.findall(r'(tm):(.*?);', record.description))
-                if "tm" in fields.keys():
-                    record.description = re.sub(r'(tm):(.*?);',
-                        'tm:%.2f;' % output[4], record.description)
-                else:
-                    record.description += " tm:%.2f;" % output[4]
-                print(record.format("fasta").strip())
-            else:
-                print("%s\t%f\t%f\t%f\t%f\t%s" % output)
+if not use_file: run_seq(seq, **data)
+else: run_fasta(seq, fasta_like, **data)
 
 
 # END ==========================================================================
