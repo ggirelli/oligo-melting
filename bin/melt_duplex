@@ -186,7 +186,7 @@ def run_fasta(fpath, **kwargs):
         else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
     # Close connection to input file
-    ih.close()
+    IH.close()
 
 # RUN ==========================================================================
 
