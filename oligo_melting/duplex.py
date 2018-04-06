@@ -771,6 +771,39 @@ def calc_tm(seq, name = None, oligo_conc = None, na_conc = None, mg_conc = None,
         if not silent: print(output)
         return(output)
 
+def calc_tm_record(record, **kwargs):
+    '''Calculate Tm for a single FASTA record read with SimpleFastaParser.
+
+    Args:
+        record (tuple): (header, seq) tuple.
+        kwargs: additional arguments to pass to calc_tm
+
+    Returns:
+        tuple: the output of calc_tm.
+        tuple: (header, seq) if kwargs['fasta_like'].
+    '''
+    record = list(record)
+    kwargs.update([('name', record[0].split(" ")[0]), ('seq', record[1])])
+
+    # Calculate Tm
+    output = OligoMelt.Duplex.calc_tm(**kwargs)
+
+    # Prepare output
+    if kwargs['fasta_like']:
+        d = kwargs['fasta_delim']
+
+        # Add Tm field to record header
+        fields = dict(re.findall(r'(tm)%s(.*?);' % d, record[0]))
+        if "tm" in fields.keys():
+            record[0] = re.sub(r'(tm)%s(.*?);' % d,
+                'tm%s%.2f;' % output[4], record[0])
+        else: record[0] += " tm%s%.2f;" % (d, output[4])
+
+        # Output
+        return(record)
+    else:
+        return(output)
+
 # END ==========================================================================
 
 ################################################################################

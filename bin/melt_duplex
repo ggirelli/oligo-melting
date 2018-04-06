@@ -181,25 +181,8 @@ def run_fasta(fpath, **kwargs):
     # Iterate FASTA records
     print_header(**kwargs)
     for record in SimpleFastaParser(IH):
-        record = list(record)
-        kwargs.update([('name', record[0].split(" ")[0]), ('seq', record[1])])
-
-        # Calculate Tm
-        output = OligoMelt.Duplex.calc_tm(**kwargs)
-
-        # Prepare output
-        if kwargs['fasta_like']:
-            d = kwargs['fasta_delim']
-
-            # Add Tm field to record header
-            fields = dict(re.findall(r'(tm)%s(.*?);' % d, record[0]))
-            if "tm" in fields.keys():
-                record[0] = re.sub(r'(tm)%s(.*?);' % d,
-                    'tm%s%.2f;' % output[4], record[0])
-            else: record[0] += " tm%s%.2f;" % (d, output[4])
-
-            # Output
-            print(">%s\n%s" % tuple(record))
+        output = OligoMelt.Duplex.calc_tm_record(record, **kwargs)
+        if kwargs['fasta_like']: print(">%s\n%s" % tuple(output))
         else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
     # Close connection to input file
