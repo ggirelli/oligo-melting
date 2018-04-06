@@ -29,7 +29,6 @@
 # DEPENDENCIES =================================================================
 
 import argparse
-from Bio import SeqIO
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 import os
 import re
@@ -214,11 +213,12 @@ def run_fasta(fpath, fasta_like, **kwargs):
 
     # Iterate FASTA records
     print_header(fasta_like = fasta_like, **kwargs)
-    for record in SeqIO.SimpleFastaParser(IH):
+    for record in SimpleFastaParser(IH):
+        record = list(record)
         kwargs.update([('name', record[0].split(" ")[0]), ('seq', record[1])])
 
         # Calculate Tm
-        output = OligoMelt.Duplex.calc_tm(**data)
+        output = OligoMelt.Duplex.calc_tm(**kwargs)
 
         # Prepare output
         if fasta_like:
@@ -231,7 +231,7 @@ def run_fasta(fpath, fasta_like, **kwargs):
             else: record[0] += " tm:%.2f;" % output[4]
 
             # Output
-            print(record.format("fasta").strip())
+            print(">%s\n%s" % tuple(record))
         else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
     # Close connection to input file
@@ -257,9 +257,6 @@ data = {
 }
 
 # CALCULATE --------------------------------------------------------------------
-
-if not is_verbose and not silent:
-    print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
 if not use_file: run_seq(seq, **data)
 else: run_fasta(seq, fasta_like, **data)
