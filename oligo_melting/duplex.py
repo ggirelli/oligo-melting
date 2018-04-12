@@ -796,7 +796,7 @@ def calc_tm_record(record, **kwargs):
         fields = dict(re.findall(r'(tm)%s(.*?);' % d, record[0]))
         if "tm" in fields.keys():
             record[0] = re.sub(r'(tm)%s(.*?);' % d,
-                'tm%s%.2f;' % output[4], record[0])
+                'tm%s%.2f;' % (d, output[4]), record[0])
         else: record[0] += " tm%s%.2f;" % (d, output[4])
 
         # Output

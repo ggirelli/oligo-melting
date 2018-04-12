@@ -8,9 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Version control of scripts and `--version` flag.
 - `melt_duplex` output in FASTA format.
+- FASTA header key-value delimiter as option.
 
 ### Changed
-- FASTA input parsed with biopython.
+- FASTA input parsed with biopython SimpleFastaParser.
 
 ### Fixed
 - Proper script help page formatting.
