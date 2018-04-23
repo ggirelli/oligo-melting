@@ -24,8 +24,8 @@ Installation
 To **install**, run the following:
 
 ```
-git clone http://github.com/ggirelli/gpseq-img-py
-cd gpseq-img-py
+git clone http://github.com/ggirelli/oligo-melting
+cd oligo-melting
 sudo -H pip3 install .
 ```
 
