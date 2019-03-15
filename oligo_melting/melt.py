@@ -11,6 +11,8 @@ import oligo_melting as om
 import os
 import pandas as pd
 import re
+from tqdm import tqdm
+import profile
 
 R = 1.987 / 1000    # kcal / (K mol)
 CELSIUS = "Celsius"
@@ -27,13 +29,22 @@ class Sequence(object):
         self.text = seq
         self.len = len(seq)
         self.rc = self.rc(seq, t)
-        self.fgc = (seq.count('G') + seq.count('C')) / float(len(seq))
+        self.fgc = (seq.count('G') + seq.count('C')) / self.len
         t = t.upper()
         assert t in AB_NA.keys(), "%s not in %s" % (t, list(AB_NA.keys()))
         self.natype = t
         self.ab = AB_NA[t]
         assert_msg = "sequence alphabet and nucleic acid type mismatch."
         assert all(x in self.ab[0] for x in set(seq)), assert_msg
+
+    def dimers(self):
+        '''Extract NN dimers from sequence.
+        Args:
+            seq (str): nucleic acid sequence.
+        Returns:
+            list: NN dimers.
+        '''
+        return (self.text[i:(i+2)] for i in range(self.len - 1))
 
     @staticmethod
     def rc(na, t):
@@ -64,14 +75,14 @@ class Sequence(object):
         return(rc)
 
     @staticmethod
-    def get_dimers(seq):
+    def dimerator(seq):
         '''Extract NN dimers from sequence.
         Args:
             seq (str): nucleic acid sequence.
         Returns:
             list: NN dimers.
         '''
-        return([seq[i:(i+2)] for i in range(len(seq) - 1)])
+        return (seq[i:(i+2)] for i in range(len(seq) - 1))
 
 class NNEnergyTable(object):
     """docstring for NNEnergyTable"""
@@ -89,12 +100,12 @@ class NNEnergyTable(object):
 
         self.has_init = "init" in self.__table.index
         if self.has_init:
-            self.__init = self.__table.loc["init", :]
+            self.__init = self.__table.loc["init", :].to_dict()
             self.__table.drop("init", axis = 0)
 
         self.has_sym = "sym" in self.__table.index
         if self.has_sym:
-            self.__sym = self.__table.loc["sym", :]
+            self.__sym = self.__table.loc["sym", :].to_dict()
             self.__table.drop("sym", axis = 0)
 
         self.has_end = any([x.startswith("end") for x in self.__table.index])
@@ -103,8 +114,10 @@ class NNEnergyTable(object):
             self.__end = self.__table.loc[endRows, :]
             self.__table.drop(endRows, axis = 0)
             self.__end.index = [x[-1] for x in self.__end.index]
+            self.__end = self.__end.to_dict()
 
         self.__ab = set("".join([x for x in self.__table.index if 2 == len(x)]))
+        self.__table = self.__table.to_dict()
 
     @property
     def natypes(self):
@@ -112,19 +125,19 @@ class NNEnergyTable(object):
 
     @property
     def tt(self):
-        return self.__table.copy()
+        return self.__table
 
     @property
     def dH0(self):
-        return self.__table.copy().loc[:, "dH0"]
+        return self.__table["dH0"]
 
     @property
     def dS0(self):
-        return self.__table.copy().loc[:, "dS0"]
+        return self.__table["dS0"]
 
     @property
     def dG0(self):
-        return self.__table.copy().loc[:, "dG0"]
+        return self.__table["dG0"]
 
     @property
     def end(self):
@@ -266,7 +279,11 @@ class MeltingIonCorrector(object):
 class MeltingDenaturantCorrector(object):
     """docstring for MeltingDenaturantCorrector"""
 
+    MODES = ("MCCONAUGHY", "WRIGHT")
     __denaturant = 25
+    __m1 = 0.1734
+    __m2 = 0
+    __mode = MODES[0]
 
     def __init__(self):
         super(MeltingDenaturantCorrector, self).__init__()
@@ -279,9 +296,32 @@ class MeltingDenaturantCorrector(object):
         assert 0 <= conc and 100 >= conc
         self.__denaturant = conc
 
-    def wright_correction(self, tm, conc0 = 0):
-        '''Adjust melting temperature of a duplex based on formamide concentration.
-        Based on Wright, Appl. env. microbiol.(80), 2014
+    @property
+    def m1(self):
+        return self.m1
+    @m1.setter
+    def m1(self, m):
+        self.__m1 = m
+
+    @property
+    def m2(self):
+        return self.__denaturant
+    @m2.setter
+    def m2(self, m):
+        self.__m2 = m
+
+    @property
+    def mode(self):
+        return self.__mode
+    @mode.setter
+    def mode(self, mode):
+        assert mode in self.MODES
+        self.__mode = mode
+    
+
+    def mcconaughy_correction(self, tm, conc0 = 0, **kwargs):
+        '''Adjust melting temperature of a duplex based on formamide
+        concentration. Based on McConaughy, Biochemistry(8), 1969
         Args:
           tm (float): melting temperature.
           conc0 (float): initial formamide concentration in %v,v.
@@ -295,14 +335,15 @@ class MeltingDenaturantCorrector(object):
             tm -= 0.72 * deltaDenaturant
         return tm
 
-    def mcconaughy_correction(self, h, s, m, oligo, conc0 = 0):
-        '''Adjust melting temperature of a duplex based on formamide concentration.
-        Based on McConaughy, Biochemistry(8), 1969
+    def wright_correction(self, tm, h, s, seq, oligo, conc0 = 0, **kwargs):
+        '''Adjust melting temperature of a duplex based on formamide
+        concentration. Based on Wright, Appl. env. microbiol.(80), 2014
         Args:
+          tm (float): melting temperature.
           h (float): standard enthalpy, in kcal / mol.
           s (float): standard enthropy, in kcal / (K mol).
+          seq (Sequence)
           oligo (float): oligonucleotide concentration in M.
-          m (float): formamide m-value function.
           conc0 (float): initial formamide concentration in %v,v.
         Returns:
           float: corrected melting temperature.
@@ -310,11 +351,16 @@ class MeltingDenaturantCorrector(object):
         deltaDenaturant = self.__denaturant - conc0
         if 0 == deltaDenaturant:
             return tm
-        else:
-            if self.__nnet.natypes[0] != self.__nnet.natypes[1]:
-                oligo /= 4
-            tm = (h + m * deltaDenaturant) / (R * np.log(oligo) + s)
+
+        m = self.__m1 if 0 == self.__m2 else self.__m1 * seq.len + self.__m2
+
+        tm = (h + m * deltaDenaturant) / (R * np.log(oligo) + s)
         return tm
+
+    def correct(self, tm, h, s, seq, oligo, conc0 = 0):
+        return getattr(self, "%s_correction" % self.__mode.lower())(
+            seq = seq, h = h, s = s, tm = tm, oligo = oligo, conc0 = conc0
+        )
 
 class Melter(object):
     """docstring for Melter"""
@@ -343,6 +389,8 @@ class Melter(object):
     @oligo.setter
     def oligo(self, conc):
         assert 0 <= conc
+        if self.__nnet.natypes[0] != self.__nnet.natypes[1]:
+            conc /= 4
         self.__oligo = conc
     
     def calculate(self, seq):
@@ -350,17 +398,14 @@ class Melter(object):
 
         # 1 M NaCl case; SantaLucia, PNAS(95), 1998
         h0, s0, tmStd = self.__calculate_standard(seq, True)
-        print(("tmStd", tmStd -273.15))
 
         # Adjust for FA; Wright, Appl. env. microbiol.(80), 2014
-        tm = self.denaturant.wright_correction(tmStd)
-        print(("tm", tm -273.15))
-        # Or McConaughy, Biochemistry(8), 1969 !!!!!!!!!!!!!!!!! <- to implement
+        # Or McConaughy, Biochemistry(8), 1969
+        tm = self.denaturant.correct(tmStd, h0, s0, seq, self.oligo)
 
         # Adjust for [Na]; Owczarzy et al, Biochemistry(43), 2004
         # Adjust for Mg; Owczarzy et al, Biochemistry(47), 2008
         tm = self.ions.correct(tm, seq)
-        print(("tm", tm -273.15))
 
         if self.__degrees == CELSIUS:
             tm -= 273.15
@@ -373,14 +418,15 @@ class Melter(object):
           seq (string): oligonucleotide sequence.
         Returns:
           tuple: hybridization enthalpy, enthropy and melting temperature.'''
-        dimers = seq.get_dimers(seq.text)
         monovalent = 1 # 1 M
 
-        h = sum([self.__nnet.dH0[c] for c in dimers])
-        s = sum([self.__nnet.dS0[c] for c in dimers])
+        h = sum([self.__nnet.dH0[c] for c in seq.dimers()])
+        s = sum([self.__nnet.dS0[c] for c in seq.dimers()])
         if self.__nnet.has_end:
-            h += self.__nnet.end.loc[[seq.text[0], seq.text[-1]], "dH0"].sum()
-            s += self.__nnet.end.loc[[seq.text[0], seq.text[-1]], "dS0"].sum()
+            h += self.__nnet.end["dH0"][seq.text[0]]
+            h += self.__nnet.end["dH0"][seq.text[-1]]
+            s += self.__nnet.end["dS0"][seq.text[0]]
+            s += self.__nnet.end["dS0"][seq.text[-1]]
         if self.__nnet.has_init:
             h += self.__nnet.init["dH0"]
             s += self.__nnet.init["dS0"]
@@ -389,18 +435,9 @@ class Melter(object):
             s += self.__nnet.sym["dS0"]
         s /= 1e3
 
-        if self.__nnet.natypes[0] != self.__nnet.natypes[1]:
-            self.__oligo /= 4
         tm = h / (s + R * np.log(self.__oligo))
 
         if self.__degrees == CELSIUS and not forceKelvin:
             tm -= 273.15
 
         return((h, s, tm))
-
-m = Melter()
-m.ions.monovalent = 0.3
-m.ions.divalent = 0
-m.denaturant.conc = 0
-#m.nnet = NN_TABLES["DNA:RNA"]
-print(m.calculate("ATGTCAATGTCAATGTCAATGTCAATGTCAATGTCAATGTCAATGTCA"))
