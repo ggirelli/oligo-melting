@@ -171,10 +171,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def print_header():
-    print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
-
-
 def parse_output(x, fasta_like=False):
     if fasta_like:
         return ">%s tm%s%.2f\n%s" % (x[0], args.delim, x[4], x[-1])
@@ -196,7 +192,7 @@ if args.celsius:
 melter.verbose = args.verbose == True
 
 if not args.fasta_like:
-    print_header()
+    print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
 OH = None
 if not type(None) == type(args.O):
