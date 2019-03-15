@@ -9,24 +9,9 @@
 # Project: oligo characterization
 # Description:  calculate melting temperature of a provide NA duplex
 # 
-# Changelog:
-#  v2.0.0 - 2018-03-28: first release withing pypi package.
-# 
-# References:
-#  [1] Freier et al, PNAS(83), 1986;
-#  [2] Sugimoto et al, Biochemistry(34), 1995.
-#  [3] Allawi & Santalucia, Biochemistry(36), 1997;
-#  [4] SantaLucia, PNAS(95), 1998;
-#  [5] Owczarzy et al, Biochemistry(43), 2004;
-#  [6] Owczarzy et al, Biochemistry(47), 2008;
-#  [7] McConaughy et al, Biochemistry(8), 1969;
-#  [8] Wright et al, Appl. env. microbiol.(80), 2014.
-# 
 # ------------------------------------------------------------------------------
 
 
-
-# DEPENDENCIES =================================================================
 
 import argparse
 from Bio.SeqIO.FastaIO import SimpleFastaParser
@@ -35,8 +20,6 @@ import re
 import sys
 
 import oligo_melting as om
-
-# PARAMETERS ===================================================================
 
 # Add script description
 parser = argparse.ArgumentParser(
@@ -126,8 +109,6 @@ parser.add_argument('--version', action = 'version',
 # Parse arguments
 args = parser.parse_args()
 
-# FUNCTIONS ====================================================================
-
 def print_header():
     print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
@@ -136,8 +117,6 @@ def parse_output(x, fasta_like = False):
         return ">%s tm%s%.2f\n%s" % (x[0], args.delim, x[4], x[-1])
     else:
         return "%s\t%.3f\t%.3f\t%.3f\t%.2f\t%s" % x
-
-# RUN ==========================================================================
 
 melter = om.Melter()
 melter.oligo = args.o
