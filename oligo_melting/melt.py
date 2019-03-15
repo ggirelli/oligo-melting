@@ -10,20 +10,19 @@ import numpy as np
 import oligo_melting as om
 import os
 import pandas as pd
+import pkg_resources
 import re
 from tqdm import tqdm
 import profile
 
 R = 1.987 / 1000    # kcal / (K mol)
-CELSIUS = "Celsius"
-KELVIN = "Kelvin"
 AB_DNA = ["ACGTRYKMSWBDHVN", "TGCAYRMKSWVHDBN"]
 AB_RNA = ["ACGURYKMSWBDHVN", "UGCAYRMKSWVHDBN"]
 AB_NA = {"DNA":AB_DNA, "RNA":AB_RNA}
 
 class Sequence(object):
     """docstring for Sequence"""
-    def __init__(self, seq, t):
+    def __init__(self, seq, t, name = None):
         super(Sequence, self).__init__()
         seq = seq.upper()
         self.text = seq
@@ -36,6 +35,10 @@ class Sequence(object):
         self.ab = AB_NA[t]
         assert_msg = "sequence alphabet and nucleic acid type mismatch."
         assert all(x in self.ab[0] for x in set(seq)), assert_msg
+        if type(name) == type(None):
+            self.name = "%d-mer" % self.len
+        else:
+            self.name = name
 
     def dimers(self):
         '''Extract NN dimers from sequence.
@@ -94,7 +97,7 @@ class NNEnergyTable(object):
         assert all([x in NATYPES for x in natypes.split(":")])
         self.__natypes = natypes.split(":")
 
-        assert os.path.isfile(path)
+        assert os.path.isfile(path), "'%s' file not found." % path
         self.__table = pd.read_csv(path, "\t",
             index_col = 0, names = ["dH0", "dS0", "dG0"])
 
@@ -171,14 +174,18 @@ NN_TABLES_PATH = {
     # Table from Allawi&Santalucia, Biochemistry(36), 1997 - in 1 M NaCl [DNA]
     "DNA:DNA" : "nntables/allawy.tsv"
 }
-NN_TABLES = [NNEnergyTable(v, k) for k,v in NN_TABLES_PATH.items()]
+PKGROOT = pkg_resources.resource_filename("oligo_melting", '')
+NN_TABLES = [NNEnergyTable(os.path.join(PKGROOT, v), k)
+    for k,v in NN_TABLES_PATH.items()]
 NN_TABLES = dict([(":".join(x.natypes), x) for x in NN_TABLES])
 
 class MeltingIonCorrector(object):
     """docstring for MeltingIonCorrector"""
 
-    __mono = .3
-    __di = 0
+    DEFAULT_MONOVALENT = .3
+    DEFAULT_DIVALENT = 0
+    __mono = DEFAULT_MONOVALENT
+    __di = DEFAULT_DIVALENT
 
     def __init__(self):
         super(MeltingIonCorrector, self).__init__()
@@ -280,10 +287,14 @@ class MeltingDenaturantCorrector(object):
     """docstring for MeltingDenaturantCorrector"""
 
     MODES = ("MCCONAUGHY", "WRIGHT")
-    __denaturant = 25
-    __m1 = 0.1734
-    __m2 = 0
-    __mode = MODES[0]
+    DEFAULT_MODE = MODES[0]
+    DEFAULT_CONC = 25
+    DEFAULT_M1 = 0.1734
+    DEFAULT_M2 = 0
+    __denaturant = DEFAULT_CONC
+    __m1 = DEFAULT_M1
+    __m2 = DEFAULT_M2
+    __mode = DEFAULT_MODE
 
     def __init__(self):
         super(MeltingDenaturantCorrector, self).__init__()
@@ -365,11 +376,15 @@ class MeltingDenaturantCorrector(object):
 class Melter(object):
     """docstring for Melter"""
 
-    __oligo = .25e-6
+    DEGREES_TYPE = ["CELSIUS", "KELVIN"]
+    DEFAULT_DEGREES_TYPE = DEGREES_TYPE[1]
+    DEFAULT_NN = 'DNA:DNA'
+    DEFAULT_OLIGO = .25e-6
+    __oligo = DEFAULT_OLIGO
     ions = MeltingIonCorrector()
     denaturant = MeltingDenaturantCorrector()
-    __nnet = NN_TABLES['DNA:DNA']
-    __degrees = "Celsius" # Either 'Celsius' or 'Kelvin'
+    __nnet = NN_TABLES[DEFAULT_NN]
+    __degrees = DEFAULT_DEGREES_TYPE
     __verbose = False
 
     def __init__(self):
@@ -392,24 +407,46 @@ class Melter(object):
         if self.__nnet.natypes[0] != self.__nnet.natypes[1]:
             conc /= 4
         self.__oligo = conc
+
+    @property
+    def degrees(self):
+        return self.__degrees
+    @degrees.setter
+    def degrees(self, d):
+        assert d in self.DEGREES_TYPE
+        self.__degrees = d
+
+    @property
+    def verbose(self):
+        return self.__verbose
+    @verbose.setter
+    def verbose(self, v):
+        assert type(v) == type(True)
+        self.__verbose = v
     
+    def load_nn_table(self, nntype):
+        assert nntype in NN_TABLES.keys()
+        self.__nnet = NN_TABLES[nntype]
+
     def calculate(self, seq):
-        seq = Sequence(seq, self.nnet.natypes[0])
+        if not type(seq) == Sequence:
+            seq = Sequence(seq, self.nnet.natypes[0])
 
         # 1 M NaCl case; SantaLucia, PNAS(95), 1998
-        h0, s0, tmStd = self.__calculate_standard(seq, True)
+        name, g, h, s, tmStd, text = self.__calculate_standard(seq, True)
 
         # Adjust for FA; Wright, Appl. env. microbiol.(80), 2014
         # Or McConaughy, Biochemistry(8), 1969
-        tm = self.denaturant.correct(tmStd, h0, s0, seq, self.oligo)
+        tm = self.denaturant.correct(tmStd, h, s, seq, self.oligo)
 
         # Adjust for [Na]; Owczarzy et al, Biochemistry(43), 2004
         # Adjust for Mg; Owczarzy et al, Biochemistry(47), 2008
         tm = self.ions.correct(tm, seq)
 
-        if self.__degrees == CELSIUS:
+        g = h - (37 + 273.15) * s
+        if self.degrees == self.DEGREES_TYPE[0]:
             tm -= 273.15
-        return(tm)
+        return((name, g, h, s, tm, text))
 
     def __calculate_standard(self, seq, forceKelvin = False):
         '''Calculate melting temperature of a duplex at standard 1 M NaCl
@@ -437,7 +474,7 @@ class Melter(object):
 
         tm = h / (s + R * np.log(self.__oligo))
 
-        if self.__degrees == CELSIUS and not forceKelvin:
+        g = h - (37 + 273.15) * s
+        if self.degrees == self.DEGREES_TYPE[0] and not forceKelvin:
             tm -= 273.15
-
-        return((h, s, tm))
+        return((seq.name, g, h, s, tm, seq.text))

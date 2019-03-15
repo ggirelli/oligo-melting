@@ -20,9 +20,9 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="oligo_melting",
-    version="2.0.2.post1",
+    version="2.0.2",
     description="""A Python3 package for melting temperature calculation of
-        oligonucleotides hybridization and secondary structures.""",
+		oligonucleotides hybridization and secondary structures.""",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ggirelli/oligo-melting",
@@ -39,6 +39,7 @@ setup(
     keywords="DNA chemistry melting temperature modeling RNA salt denaturant",
     packages=["oligo_melting"],
     install_requires=["biopython"],
+    package_data={"oligo_melting": ["nntables/*"]},
     scripts=["bin/melt_duplex", "bin/melt_secstr"],
     test_suite="nose.collector",
     tests_require=["nose"],
