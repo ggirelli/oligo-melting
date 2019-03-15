@@ -34,7 +34,7 @@ import os
 import re
 import sys
 
-import oligo_melting as OligoMelt
+import oligo_melting as om
 
 # PARAMETERS ===================================================================
 
@@ -42,7 +42,8 @@ import oligo_melting as OligoMelt
 parser = argparse.ArgumentParser(
     description = '''
 Calculate melting temperature of a DNA duplex at provided [oligo],
-[Na+], [Mg2+]. Either provide an oligo sequence or a FASTA file. References:
+[Na+], [Mg2+]. Either provide an oligo sequence or a FASTA file.
+References:
  [1] Freier et al, PNAS(83), 1986;
  [2] Sugimoto et al, Biochemistry(34), 1995.
  [3] Allawi & Santalucia, Biochemistry(36), 1997;
@@ -54,62 +55,58 @@ Calculate melting temperature of a DNA duplex at provided [oligo],
 ''', formatter_class = argparse.RawDescriptionHelpFormatter)
 
 # Add mandatory arguments
-parser.add_argument('seq', type = str, nargs = 1, help = '''
-    DNA duplex sequence (one strand only) or path to a FASTA file (use with -F).
-    ''')
+parser.add_argument('input', type = str, help = '''DNA duplex sequence
+    (one strand only) or path to a FASTA file.''')
 
 # Add arguments with default value
-parser.add_argument('-t', '--type', type = str, nargs = 1,
+parser.add_argument('-O', metavar = "output", type = str,
+    help = '''Path to output file.''')
+parser.add_argument('-t', type = str,
     help = '''Duplex type. Possible values: DNA:DNA (based on ref.3, default),
     RNA:RNA (based on ref.1), DNA:RNA (based on ref.2., given DNA sequence)
     or RNA:DNA (based on ref.2, given RNA sequence). The first nucleic acid type
     indicates the provided sequence.''',
-    choices = OligoMelt.Duplex.NN_LABELS,
-    default = [OligoMelt.Duplex.DEFAULT_NN_LABEL])
-parser.add_argument('-o', '--oconc', metavar = "oligo_conc",
-    type = float, nargs = 1,
+    choices = om.NN_TABLES.keys(),
+    default = om.Melter.DEFAULT_NN)
+parser.add_argument('-o', metavar = "oligo_conc",
+    type = float,
     help = '''Oligonucleotide concentration [M].
-    Default: %.2E M''' % OligoMelt.Duplex.DEFAULT_OLIGO_CONC,
-    default = [OligoMelt.Duplex.DEFAULT_OLIGO_CONC])
-parser.add_argument('-n', '--naconc', metavar = "na_conc",
-    type = float, nargs = 1,
+    Default: %.2E M''' % om.Melter.DEFAULT_OLIGO,
+    default = om.Melter.DEFAULT_OLIGO)
+parser.add_argument('-n', metavar = "na_conc",
+    type = float,
     help = '''Na+ concentration [M].
-    Default: %.2E M''' % OligoMelt.Duplex.DEFAULT_NA_CONC,
-    default = [OligoMelt.Duplex.DEFAULT_NA_CONC])
-parser.add_argument('-m', '--mgconc', metavar = "mg_conc",
-    type = float, nargs = 1,
+    Default: %.2E M''' % om.MeltingIonCorrector.DEFAULT_MONOVALENT,
+    default = om.MeltingIonCorrector.DEFAULT_MONOVALENT)
+parser.add_argument('-m', metavar = "mg_conc",
+    type = float,
     help = '''Mg2+ concentration [M]. Note: Mg2+ correction overwrites Na+
-    correction. Default: %.2E M''' % OligoMelt.Duplex.DEFAULT_MG_CONC,
-    default = [OligoMelt.Duplex.DEFAULT_MG_CONC])
-parser.add_argument('-f', '--faconc', type = float, nargs = 1,
+    correction. Default: %.2E M''' % om.MeltingIonCorrector.DEFAULT_DIVALENT,
+    default = om.MeltingIonCorrector.DEFAULT_DIVALENT)
+parser.add_argument('-f', type = float,
     metavar = 'fa_conc', help = '''Formamide concentration in perc.v,v.
-    Default: %.2f''' % OligoMelt.Duplex.DEFAULT_FA_CONC,
-    default = [OligoMelt.Duplex.DEFAULT_FA_CONC])
-parser.add_argument('--fa-mode', type = str, nargs = 1,
+    Default: %.2f''' % om.MeltingDenaturantCorrector.DEFAULT_CONC,
+    default = om.MeltingDenaturantCorrector.DEFAULT_CONC)
+parser.add_argument('--f-mode', type = str,
     metavar = 'fa_mode', help = '''Mode of formamide correction. "mcconaughy"
     for classical -0.72%%FA correction from ref. 7, "wright" for single reaction
     model correction from ref.8 (default).''',
-    choices = OligoMelt.Duplex.FA_MODE_LABELS,
-    default = [OligoMelt.Duplex.DEFAULT_FA_MODE])
-parser.add_argument('--fa-mvalue', type = str, nargs = 1, metavar = 'm',
+    choices = om.MeltingDenaturantCorrector.MODES,
+    default = om.MeltingDenaturantCorrector.DEFAULT_MODE)
+parser.add_argument('--f-mvalue-1', type = str, metavar = 'm1',
     help = '''Specify the formamide m-value to be used with the wright
-    correction model. Use either a single value "x" or two values "xL+y" where
-    L is the probe length. Default: %s''' % OligoMelt.Duplex.DEFAULT_FA_MVALUE,
-    default = [OligoMelt.Duplex.DEFAULT_FA_MVALUE])
-parser.add_argument('--t-curve', type = float, nargs = 2,
-    metavar = ('range', 'step'), help = '''Temperature range and step for
-    melting curve generation. Use --make-curve option to generate the curve.
-    Default: %.1f degC range and %.2f degC step.
-    ''' % (OligoMelt.Duplex.DEFAULT_T_CURVE_RANGE,
-        OligoMelt.Duplex.DEFAULT_T_CURVE_STEP), default = [
-        OligoMelt.Duplex.DEFAULT_T_CURVE_RANGE,
-        OligoMelt.Duplex.DEFAULT_T_CURVE_STEP])
-parser.add_argument('--out-curve', type = str, nargs = 1, metavar = "outname",
-    help = '''Path to output table containing tabulated curves.''',
-    default = [OligoMelt.Duplex.DEFAULT_OUT_CURVE])
-parser.add_argument('-d', '--delim', type = str, nargs = 1, metavar = "sep",
+    correction model. If the second m-value is 0, this is used as a single value
+    "x", otherwise the two values are used as "xL+y" where L is the probe
+    length. Default: %s''' % om.MeltingDenaturantCorrector.DEFAULT_M1,
+    default = om.MeltingDenaturantCorrector.DEFAULT_M1)
+parser.add_argument('--f-mvalue-2', type = str, metavar = 'm2',
+    help = '''Specify the formamide m-value to be used with the wright
+    correction model. This is used as y in "xL+y", where L is the probe length.
+    Default: %s''' % om.MeltingDenaturantCorrector.DEFAULT_M2,
+    default = om.MeltingDenaturantCorrector.DEFAULT_M2)
+parser.add_argument('-d', '--delim', type = str, metavar = "sep",
     help = '''Delimiter between key and value in FASTA header description.
-    Default: "="''', default = ["="])
+    Default: "="''', default = "=")
 
 # Add flags
 parser.add_argument('-C', '--celsius',
@@ -117,103 +114,70 @@ parser.add_argument('-C', '--celsius',
     const = True, default = False,
     help = 'Output temperature in Celsius degrees. Default: Kelvin')
 parser.add_argument('-F', '--fasta-like',
-    dest = 'fastaLike', action = 'store_const',
+    dest = 'fasta_like', action = 'store_const',
     const = True, default = False,
     help = 'Output in FASTA format.')
-parser.add_argument('-v', '--verbose',
-    dest = 'verbose', action = 'store_const',
-    const = True, default = False,
-    help = 'Verbose output.')
 
 # Version flag
-version = "2.0.0"
+version = "3.0.0"
 parser.add_argument('--version', action = 'version',
     version = '%s v%s' % (sys.argv[0], version,))
 
 # Parse arguments
 args = parser.parse_args()
 
-# Additional checks ------------------------------------------------------------
-
-# Check proper curve step/range pair
-assert_msg = "curve step must be smaller than curve range."
-assert args.t_curve[1] <= args.t_curve[0] / 2, assert_msg
-args.t_curve[0] -= args.t_curve[0] % args.t_curve[1]
-
 # FUNCTIONS ====================================================================
 
-def print_header(**kwa):
-    if not kwa['is_verbose'] and not kwa['silent'] and not kwa['fasta_like']:
-        print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
+def print_header():
+    print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
-def run_seq(seq, **kwargs):
-    '''Analyze single sequence.
-
-    Args:
-        seq (str): nucleic acid sequence.
-        kwargs (dict): additional shared arguments.
-    '''
-
-    # Update shared params
-    kwargs.update([('name', 'seq'), ('seq', seq)])
-
-    # Calculate Tm
-    output = OligoMelt.XDuplex.calc_tm(**kwargs)
-
-    # Print output
-    print_header(fasta_like = fasta_like, **kwargs)
-    d = kwargs['fasta_delim']
-    if fasta_like: print(">seq tm%s%.2f;\n%s" % (d, output[4], seq))
-    else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
-
-def run_fasta(fpath, **kwargs):
-    '''Analyze each record in a FASTA file.
-
-    Args:
-        fpath (str): path to input FASTA file.
-        fasta_like (bool): format output as FASTA file.
-        kwargs (dict)L additional shared arguments.
-    '''
-
-    # Open connection to input file
-    IH = open(fpath, "r")
-
-    # Iterate FASTA records
-    print_header(**kwargs)
-    for record in SimpleFastaParser(IH):
-        output = OligoMelt.Duplex.calc_tm_record(record, **kwargs)
-        if kwargs['fasta_like']: print(">%s\n%s" % tuple(output))
-        else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
-
-    # Close connection to input file
-    IH.close()
+def parse_output(x, fasta_like = False):
+    if fasta_like:
+        return ">%s tm%s%.2f\n%s" % (x[0], args.delim, x[4], x[-1])
+    else:
+        return "%s\t%.3f\t%.3f\t%.3f\t%.2f\t%s" % x
 
 # RUN ==========================================================================
 
-# Build argument dictionary
-data = {
-    'oligo_conc' : args.oconc[0],
-    'na_conc' : args.naconc[0],
-    'mg_conc' : args.mgconc[0],
-    'fa_conc' : args.faconc[0],
-    'fa_mode' : args.fa_mode[0],
-    'fa_mval_s' : args.fa_mvalue[0],
-    'tt_mode' : args.type[0],
-    'celsius' : args.celsius,
-    'is_verbose' : args.verbose,
-    'curve_step' : args.t_curve[1],
-    'curve_range' : args.t_curve[0],
-    'curve_outpath' : args.out_curve[0],
-    'fasta_like' : args.fastaLike,
-    'fasta_delim' : args.delim[0],
-    'silent' : args.fastaLike
-}
+melter = om.Melter()
+melter.oligo = args.o
+melter.ions.monovalent = args.n
+melter.ions.divalent = args.m
+melter.denaturant.conc = args.f
+melter.denaturant.mode = args.f_mode
+melter.denaturant.m1 = args.f_mvalue_1
+melter.denaturant.m2 = args.f_mvalue_2
+melter.load_nn_table(args.t)
+if args.celsius:
+    melter.degrees = melter.DEGREES_TYPE[0]
+melter.verbose = args.verbose == True
 
-# CALCULATE --------------------------------------------------------------------
+if not args.fasta_like:
+    print_header()
 
-if os.path.isfile(args.seq[0]): run_fasta(args.seq[0], **data)
-else: run_seq(args.seq[0], **data)
+OH = None
+if not type(None) == type(args.O):
+    OH = open(args.O, "w+")
+    def pout(x, f, OH):
+        x = parse_output(x, f)
+        print(x)
+        OH.write("%s\n" % x)
+else:
+    def pout(x, f, OH):
+        x = parse_output(x, f)
+        print(x)
 
+if os.path.isfile(args.input):
+    IH = open(args.input, "r")
+    for record in SimpleFastaParser(IH):
+        seq = om.Sequence(record[1], args.t.split(":")[0], record[0])
+        pout(melter.calculate(seq), args.fasta_like, OH)
+    IH.close()
+else:
+    pout(melter.calculate(args.input), args.fasta_like, OH)
+
+if not type(None) == type(args.O):
+    OH.close()
 
 # END ==========================================================================
 

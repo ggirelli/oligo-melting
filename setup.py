@@ -38,6 +38,9 @@ setup(name='oligo_melting',
 	keywords='DNA chemistry melting temperature modeling RNA salt denaturant',
 	packages=["oligo_melting"],
 	install_requires=["biopython"],
+	package_data={
+		"oligo_melting": ["nntables/*"]
+	},
 	scripts=["bin/melt_duplex", "bin/melt_secstr"],
 	test_suite="nose.collector",
 	tests_require=["nose"],
