@@ -16,8 +16,8 @@ from tqdm import tqdm
 import profile
 
 R = 1.987 / 1000    # kcal / (K mol)
-AB_DNA = ["ACGTRYKMSWBDHVN", "TGCAYRMKSWVHDBN"]
-AB_RNA = ["ACGURYKMSWBDHVN", "UGCAYRMKSWVHDBN"]
+AB_DNA = ["ACGT", "TGCA"]
+AB_RNA = ["ACGU", "UGCA"]
 AB_NA = {"DNA":AB_DNA, "RNA":AB_RNA}
 
 class Sequence(object):
