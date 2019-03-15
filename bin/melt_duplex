@@ -217,6 +217,7 @@ if os.path.isfile(args.input):
     IH.close()
 else:
     pout(melter.calculate(args.input), args.fasta_like, OH)
+    #curve = melter.melting_curve(args.input)
 
 if not type(None) == type(args.O):
     OH.close()

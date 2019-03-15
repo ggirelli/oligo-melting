@@ -363,10 +363,11 @@ class MeltingDenaturantCorrector(object):
         if 0 == deltaDenaturant:
             return tm
 
-        m = self.__m1 if 0 == self.__m2 else self.__m1 * seq.len + self.__m2
-
-        tm = (h + m * deltaDenaturant) / (R * np.log(oligo) + s)
+        tm = (h + self.mvalue() * deltaDenaturant) / (R * np.log(oligo) + s)
         return tm
+
+    def mvalue(self):
+        return self.__m1 if 0 == self.__m2 else self.__m1 * seq.len + self.__m2
 
     def correct(self, tm, h, s, seq, oligo, conc0 = 0):
         return getattr(self, "%s_correction" % self.__mode.lower())(
@@ -380,11 +381,15 @@ class Melter(object):
     DEFAULT_DEGREES_TYPE = DEGREES_TYPE[1]
     DEFAULT_NN = 'DNA:DNA'
     DEFAULT_OLIGO = .25e-6
+    DEFAULT_RANGE = 10
+    DEFAULT_STEP = .1
+
     __oligo = DEFAULT_OLIGO
     ions = MeltingIonCorrector()
     denaturant = MeltingDenaturantCorrector()
     __nnet = NN_TABLES[DEFAULT_NN]
     __degrees = DEFAULT_DEGREES_TYPE
+    __curve = [DEFAULT_RANGE, DEFAULT_STEP]
 
     def __init__(self):
         super(Melter, self).__init__()
@@ -415,11 +420,32 @@ class Melter(object):
         assert d in self.DEGREES_TYPE
         self.__degrees = d
     
+    @property
+    def curve_range(self):
+        return self.__curve[0]
+    @curve_range.setter
+    def curve_range(self, x):
+        self.__curve[0] = x
+
+    @property
+    def curve_step(self):
+        return self.__curve[1]
+    @curve_step.setter
+    def curve_step(self, x):
+        self.__curve[1] = x
+
     def load_nn_table(self, nntype):
         assert nntype in NN_TABLES.keys()
         self.__nnet = NN_TABLES[nntype]
 
     def calculate(self, seq):
+        '''Calculate melting temperature of provided sequence.
+        Args:
+            seq (Sequence/string)
+        Returns:
+            tuple: sequence name, hybridization enthalpy, enthropy, melting
+                   temperature, and sequence
+        '''
         if not type(seq) == Sequence:
             seq = Sequence(seq, self.nnet.natypes[0])
 
@@ -443,10 +469,11 @@ class Melter(object):
         '''Calculate melting temperature of a duplex at standard 1 M NaCl
         (monovalent ions conc). Based on SantaLucia, PNAS(95), 1998
         Args:
-          seq (string): oligonucleotide sequence.
+            seq (Sequence/string)
         Returns:
-          tuple: hybridization enthalpy, enthropy and melting temperature.'''
-        monovalent = 1 # 1 M
+            tuple: sequence name, hybridization enthalpy, entropy, melting
+                   temperature, and sequence
+        '''
 
         h = sum([self.__nnet.dH0[c] for c in seq.dimers()])
         s = sum([self.__nnet.dS0[c] for c in seq.dimers()])
@@ -469,3 +496,62 @@ class Melter(object):
         if self.degrees == self.DEGREES_TYPE[0] and not forceKelvin:
             tm -= 273.15
         return((seq.name, g, h, s, tm, seq.text))
+
+    def melting_curve(self, seq):
+        '''Generate melting curve.
+        Args:
+            seq (Sequence)
+            g (float): hybridization free energy
+            h (float): hybridization enthalpy
+            s (float): hybridization entropy
+            tm (float): melting temperature
+        Returns:
+            list of tuples: [(temperature, dissociated fraction), ...]
+        '''
+
+        if not type(seq) == Sequence:
+            seq = Sequence(seq, self.nnet.natypes[0])
+        
+        name, g, h, s, tm, text = self.__calculate_standard(seq, True)
+
+        if self.denaturant.mode == self.denaturant.MODES[1]:
+            tm = self.denaturant.correct(tm, h, s, seq, self.oligo)
+            def compute_curve_step(t, h, s, seq):
+                m = self.denaturant.mvalue()
+                k = self.__dissoc_fraction(t, h, s, m * self.denaturant.conc)
+                return (t, k)
+        else:
+            def compute_curve_step(t, h, s, seq):
+                k = self.__dissoc_fraction(t, h, s, 0)
+                t = self.denaturant.correct(t, h, s, seq, self.oligo)
+                return (t, k)
+
+        if self.degrees == self.DEGREES_TYPE[0]:
+            parse_tm = lambda x: x - 273.15
+        else:
+            parse_tm = lambda x: x
+
+        curve = []
+        tstart = tm - self.curve_range / 2
+        for ti in range(int(self.curve_range/self.curve_step)):
+            t, f = compute_curve_step(tstart + self.curve_step * ti, h, s, seq)
+            t = self.ions.correct(t, seq)
+            curve.append((parse_tm(t), f))
+        
+        curve = np.array(curve)
+
+        return curve
+
+    def __dissoc_fraction(self, t, h, s, gplus):
+        '''Calculate duplex dissociated fraction at given temperature.
+        Args:
+            t (float): temperature
+            h (float): enthalpy
+            s (float): entropy
+            g (float): free energy difference due to denaturants
+        Returns:
+            float: dissociated fraction
+        '''
+        dg = h - t * s + gplus
+        factor = np.exp(-dg / (R * t)) * self.oligo
+        return 1 / (1 + factor)
