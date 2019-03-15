@@ -189,7 +189,6 @@ melter.denaturant.m2 = args.f_mvalue_2
 melter.load_nn_table(args.t)
 if args.celsius:
     melter.degrees = melter.DEGREES_TYPE[0]
-melter.verbose = args.verbose == True
 
 if not args.fasta_like:
     print("oligo_name\tdG\tdH\tdS\tTm\tSeq")

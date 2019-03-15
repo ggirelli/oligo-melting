@@ -385,7 +385,6 @@ class Melter(object):
     denaturant = MeltingDenaturantCorrector()
     __nnet = NN_TABLES[DEFAULT_NN]
     __degrees = DEFAULT_DEGREES_TYPE
-    __verbose = False
 
     def __init__(self):
         super(Melter, self).__init__()
@@ -415,14 +414,6 @@ class Melter(object):
     def degrees(self, d):
         assert d in self.DEGREES_TYPE
         self.__degrees = d
-
-    @property
-    def verbose(self):
-        return self.__verbose
-    @verbose.setter
-    def verbose(self, v):
-        assert type(v) == type(True)
-        self.__verbose = v
     
     def load_nn_table(self, nntype):
         assert nntype in NN_TABLES.keys()
