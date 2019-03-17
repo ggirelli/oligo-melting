@@ -34,6 +34,7 @@ class Sequence(object):
         self.natype = t
         self.ab = AB_NA[t]
         assert_msg = "sequence alphabet and nucleic acid type mismatch."
+        assert_msg += "\n%s\t%s" % (set(seq), self.ab[0])
         assert all(x in self.ab[0] for x in set(seq)), assert_msg
         if type(name) == type(None):
             self.name = "%d-mer" % self.len
@@ -67,7 +68,9 @@ class Sequence(object):
         na = na.lower()
 
         for c in na:
-            assert c in ab, 'provided string conflicts with selected alphabet.'
+            assert_msg = 'provided string conflicts with selected alphabet.'
+            assert_msg += " (%s in %s)" % (c, na)
+            assert c in ab, assert_msg
 
         r = na[::-1]
         rc = []
