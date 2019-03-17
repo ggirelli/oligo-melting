@@ -15,11 +15,11 @@
 
 import argparse
 from Bio.SeqIO.FastaIO import SimpleFastaParser
+import oligo_melting as om
 import os
+import pandas as pd
 import re
 import sys
-
-import oligo_melting as om
 
 # Add script description
 parser = argparse.ArgumentParser(
@@ -90,6 +90,17 @@ parser.add_argument('--f-mvalue-2', type = str, metavar = 'm2',
 parser.add_argument('-d', '--delim', type = str, metavar = "sep",
     help = '''Delimiter between key and value in FASTA header description.
     Default: "="''', default = "=")
+parser.add_argument('--out-curve', type = str, metavar = "output",
+    help = '''Provide path to file where melting curve points should be
+    stored.''')
+parser.add_argument('--curve-range', type = float, metavar = "range",
+    help = '''Range size to scan around the melting temperature, to build the
+    melting curve. Default: %f''' % om.Melter.DEFAULT_RANGE,
+    default = om.Melter.DEFAULT_RANGE)
+parser.add_argument('--curve-step', type = float, metavar = "range",
+    help = '''Temperature step used to scan the specified range, when building
+    the melting curve. Default: %f''' % om.Melter.DEFAULT_STEP,
+    default = om.Melter.DEFAULT_STEP)
 
 # Add flags
 parser.add_argument('-C', '--celsius',
@@ -116,9 +127,13 @@ def parse_output(x, fasta_like = False):
         return "%s\t%.3f\t%.3f\t%.3f\t%.2f\t%s" % x
 
 melter = om.Melter()
+assert args.o >= 0, "concentration cannot be negative."
 melter.oligo = args.o
+assert args.n >= 0, "concentration cannot be negative."
 melter.ions.monovalent = args.n
+assert args.m >= 0, "concentration cannot be negative."
 melter.ions.divalent = args.m
+assert args.f >= 0, "concentration cannot be negative."
 melter.denaturant.conc = args.f
 melter.denaturant.mode = args.f_mode
 melter.denaturant.m1 = args.f_mvalue_1
@@ -126,6 +141,8 @@ melter.denaturant.m2 = args.f_mvalue_2
 melter.load_nn_table(args.t)
 if args.celsius:
     melter.degrees = melter.DEGREES_TYPE[0]
+assert args.curve_range > 0, "temperature range must be positive."
+assert args.curve_step > 0, "temperature step must be positive."
 
 if not args.fasta_like:
     print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
@@ -142,18 +159,34 @@ else:
         x = parse_output(x, f)
         print(x)
 
+if type(None) != type(args.out_curve):
+    if os.path.isfile(args.out_curve):
+        os.remove(args.out_curve)
+    COH = open(args.out_curve, "a+")
+
 if os.path.isfile(args.input):
     IH = open(args.input, "r")
     for record in SimpleFastaParser(IH):
         seq = om.Sequence(record[1], args.t.split(":")[0], record[0])
-        pout(melter.calculate(seq), args.fasta_like, OH)
+        data = melter.calculate(seq)
+        pout(data, args.fasta_like, OH)
+        if type(None) != type(args.out_curve):
+            curve = pd.DataFrame(melter.melting_curve(seq))
+            curve['name'] = data[0]
+            curve.to_csv(COH, "\t", index = None, header = None)
     IH.close()
 else:
-    pout(melter.calculate(args.input), args.fasta_like, OH)
-    #curve = melter.melting_curve(args.input)
+    data = melter.calculate(args.input)
+    pout(data, args.fasta_like, OH)
+    if type(None) != type(args.out_curve):
+        curve = pd.DataFrame(melter.melting_curve(args.input))
+        curve['name'] = data[0]
+        curve.to_csv(COH, "\t", index = None, header = None)
 
 if not type(None) == type(args.O):
     OH.close()
+if type(None) != type(args.out_curve):
+    COH.close()
 
 # END ==========================================================================
 
