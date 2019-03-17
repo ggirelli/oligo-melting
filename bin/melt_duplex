@@ -15,11 +15,14 @@
 
 import argparse
 from Bio.SeqIO.FastaIO import SimpleFastaParser
+from ggc.args import check_threads
+from joblib import Parallel, delayed
 import oligo_melting as om
 import os
 import pandas as pd
 import re
 import sys
+from tqdm import tqdm
 
 # Add script description
 parser = argparse.ArgumentParser(
@@ -44,7 +47,7 @@ parser.add_argument('input', type = str, help = '''DNA duplex sequence
 # Add arguments with default value
 parser.add_argument('-O', metavar = "output", type = str,
     help = '''Path to output file.''')
-parser.add_argument('-t', type = str,
+parser.add_argument('-T', type = str,
     help = '''Duplex type. Possible values: DNA:DNA (based on ref.3, default),
     RNA:RNA (based on ref.1), DNA:RNA (based on ref.2., given DNA sequence)
     or RNA:DNA (based on ref.2, given RNA sequence). The first nucleic acid type
@@ -90,6 +93,9 @@ parser.add_argument('--f-mvalue-2', type = str, metavar = 'm2',
 parser.add_argument('-d', '--delim', type = str, metavar = "sep",
     help = '''Delimiter between key and value in FASTA header description.
     Default: "="''', default = "=")
+parser.add_argument('-t', type = int, metavar = "threads",
+    help = '''Number of threads for parallelization. Default: 1''',
+    default = 1)
 parser.add_argument('--out-curve', type = str, metavar = "output",
     help = '''Provide path to file where melting curve points should be
     stored.''')
@@ -138,11 +144,12 @@ melter.denaturant.conc = args.f
 melter.denaturant.mode = args.f_mode
 melter.denaturant.m1 = args.f_mvalue_1
 melter.denaturant.m2 = args.f_mvalue_2
-melter.load_nn_table(args.t)
+melter.load_nn_table(args.T)
 if args.celsius:
     melter.degrees = melter.DEGREES_TYPE[0]
 assert args.curve_range > 0, "temperature range must be positive."
 assert args.curve_step > 0, "temperature step must be positive."
+args.t = check_threads(args.t)
 
 if not args.fasta_like:
     print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
@@ -166,14 +173,39 @@ if type(None) != type(args.out_curve):
 
 if os.path.isfile(args.input):
     IH = open(args.input, "r")
-    for record in SimpleFastaParser(IH):
-        seq = om.Sequence(record[1], args.t.split(":")[0], record[0])
-        data = melter.calculate(seq)
-        pout(data, args.fasta_like, OH)
+    if 1 == args.t:
+        for record in SimpleFastaParser(IH):
+            seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
+            data = melter.calculate(seq)
+            pout(data, args.fasta_like, OH)
+            if type(None) != type(args.out_curve):
+                curve = pd.DataFrame(melter.melting_curve(seq))
+                curve['name'] = data[0]
+                curve.to_csv(COH, "\t", index = None, header = None)
+    else:
         if type(None) != type(args.out_curve):
-            curve = pd.DataFrame(melter.melting_curve(seq))
-            curve['name'] = data[0]
-            curve.to_csv(COH, "\t", index = None, header = None)
+            def calc_melting(record):
+                seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
+                curve = pd.DataFrame(melter.melting_curve(seq))
+                curve['name'] = record[0]
+                return {"melt" : melter.calculate(seq), "curve" : curve}
+        else:
+            def calc_melting(record):
+                seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
+                return {"melt" : melter.calculate(seq)}
+
+        data = Parallel(n_jobs = args.t, verbose = 11)(
+            delayed(calc_melting)(record)
+            for record in SimpleFastaParser(IH))
+
+        if type(None) != type(args.out_curve):
+            for record in tqdm(data):
+                pout(record["melt"], args.fasta_like, OH)
+        else:
+            for record in tqdm(data):
+                pout(record["melt"], args.fasta_like, OH)
+                record["curve"].to_csv(COH, "\t",
+                    index = False, header = False)
     IH.close()
 else:
     data = melter.calculate(args.input)
