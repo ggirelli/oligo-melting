@@ -332,7 +332,6 @@ class MeltingDenaturantCorrector(object):
         assert mode in self.MODES
         self.__mode = mode
     
-
     def mcconaughy_correction(self, tm, conc0 = 0, **kwargs):
         '''Adjust melting temperature of a duplex based on formamide
         concentration. Based on McConaughy, Biochemistry(8), 1969
@@ -500,7 +499,8 @@ class Melter(object):
             tm -= 273.15
         return((seq.name, g, h, s, tm, seq.text))
 
-    def melting_curve(self, seq):
+    def melting_curve(self, seq, h = None, s = None, tm = None,
+        correctIons = True):
         '''Generate melting curve.
         Args:
             seq (Sequence)
@@ -515,7 +515,9 @@ class Melter(object):
         if not type(seq) == Sequence:
             seq = Sequence(seq, self.nnet.natypes[0])
         
-        name, g, h, s, tm, text = self.__calculate_standard(seq, True)
+        ntype = type(None)
+        if ntype==type(h) or ntype==type(s) or ntype==type(tm):
+            name, g, h, s, tm, text = self.__calculate_standard(seq, True)
 
         if self.denaturant.mode == self.denaturant.MODES[1]:
             tm = self.denaturant.correct(tm, h, s, seq, self.oligo)
@@ -536,10 +538,15 @@ class Melter(object):
 
         curve = []
         tstart = tm - self.curve_range / 2
-        for ti in range(int(self.curve_range/self.curve_step)):
-            t, f = compute_curve_step(tstart + self.curve_step * ti, h, s, seq)
-            t = self.ions.correct(t, seq)
-            curve.append((parse_tm(t), f))
+        if correctIons:
+            for ti in range(int(self.curve_range/self.curve_step)):
+                t, f = compute_curve_step(tstart + self.curve_step * ti, h, s, seq)
+                t = self.ions.correct(t, seq)
+                curve.append((parse_tm(t), f))
+        else:
+            for ti in range(int(self.curve_range/self.curve_step)):
+                t, f = compute_curve_step(tstart + self.curve_step * ti, h, s, seq)
+                curve.append((parse_tm(t), f))
         
         curve = np.array(curve)
 
