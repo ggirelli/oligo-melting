@@ -185,7 +185,7 @@ NN_TABLES = dict([(":".join(x.natypes), x) for x in NN_TABLES])
 class MeltingIonCorrector(object):
     """docstring for MeltingIonCorrector"""
 
-    DEFAULT_MONOVALENT = .3
+    DEFAULT_MONOVALENT = 1
     DEFAULT_DIVALENT = 0
     __mono = DEFAULT_MONOVALENT
     __di = DEFAULT_DIVALENT
@@ -291,7 +291,7 @@ class MeltingDenaturantCorrector(object):
 
     MODES = ("MCCONAUGHY", "WRIGHT")
     DEFAULT_MODE = MODES[0]
-    DEFAULT_CONC = 25
+    DEFAULT_CONC = 0
     DEFAULT_M1 = 0.1734
     DEFAULT_M2 = 0
     __denaturant = DEFAULT_CONC
