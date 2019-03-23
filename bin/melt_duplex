@@ -162,6 +162,10 @@ else:
         x = parse_output(x, f)
         print(x)
 
+header = "oligo_name\tdG\tdH\tdS\tTm\tSeq"
+if not args.fasta_like:
+    OH.write("%s\n" % header)
+
 if type(None) != type(args.out_curve):
     if os.path.isfile(args.out_curve):
         os.remove(args.out_curve)
@@ -170,6 +174,8 @@ if type(None) != type(args.out_curve):
 if os.path.isfile(args.input):
     IH = open(args.input, "r")
     if 1 == args.t:
+        if not args.fasta_like:
+            print(header)
         for record in SimpleFastaParser(IH):
             seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
             data = melter.calculate(seq)
@@ -194,6 +200,8 @@ if os.path.isfile(args.input):
             delayed(calc_melting)(record)
             for record in SimpleFastaParser(IH))
 
+        if not args.fasta_like:
+            print(header)
         if type(None) != type(args.out_curve):
             for record in tqdm(data):
                 pout(record["melt"], args.fasta_like, OH)
