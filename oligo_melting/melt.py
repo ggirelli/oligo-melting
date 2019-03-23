@@ -20,6 +20,7 @@ AB_NA = {"DNA":AB_DNA, "RNA":AB_RNA}
 
 class Sequence(object):
     """docstring for Sequence"""
+
     def __init__(self, seq, t, name = None):
         super(Sequence, self).__init__()
         seq = seq.upper()
@@ -33,7 +34,7 @@ class Sequence(object):
         self.ab = AB_NA[t]
         assert_msg = "sequence alphabet and nucleic acid type mismatch."
         assert_msg += "\n%s\t%s" % (set(seq), self.ab[0])
-        assert all(x in self.ab[0] for x in set(seq)), assert_msg
+        assert self.check_ab(seq, self.ab), assert_msg
         if type(name) == type(None):
             self.name = "%d-mer" % self.len
         else:
@@ -46,7 +47,11 @@ class Sequence(object):
         Returns:
             list: NN dimers.
         '''
-        return (self.text[i:(i+2)] for i in range(self.len - 1))
+        return self.dimerator(self.text)
+
+    @staticmethod
+    def check_ab(seq, ab):
+        return all(x in ab[0] for x in set(seq))
 
     @staticmethod
     def rc(na, t):
