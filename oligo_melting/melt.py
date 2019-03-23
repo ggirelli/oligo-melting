@@ -7,13 +7,11 @@
 '''
 
 import numpy as np
-import oligo_melting as om
 import os
 import pandas as pd
 import pkg_resources
 import re
 from tqdm import tqdm
-import profile
 
 R = 1.987 / 1000    # kcal / (K mol)
 AB_DNA = ["ACGT", "TGCA"]
