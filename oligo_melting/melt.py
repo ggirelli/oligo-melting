@@ -6,6 +6,7 @@
               single-strand oligonucleotide secondary structures.
 '''
 
+from enum import Enum
 import numpy as np
 import os
 import pandas as pd
@@ -292,8 +293,10 @@ class MeltingIonCorrector(object):
 class MeltingDenaturantCorrector(object):
     """docstring for MeltingDenaturantCorrector"""
 
-    MODES = ("MCCONAUGHY", "WRIGHT")
-    DEFAULT_MODE = MODES[0]
+    class MODES(Enum):
+        MCCONAUGHY = 1
+        WRIGHT = 2
+    DEFAULT_MODE = MODES.MCCONAUGHY
     DEFAULT_CONC = 0
     DEFAULT_M1 = 0.1734
     DEFAULT_M2 = 0
@@ -375,15 +378,17 @@ class MeltingDenaturantCorrector(object):
         return self.__m1 if 0 == self.__m2 else self.__m1 * seq.len + self.__m2
 
     def correct(self, tm, h, s, seq, oligo, conc0 = 0):
-        return getattr(self, "%s_correction" % self.__mode.lower())(
+        return getattr(self, "%s_correction" % self.__mode.name.lower())(
             seq = seq, h = h, s = s, tm = tm, oligo = oligo, conc0 = conc0
         )
 
 class Melter(object):
     """docstring for Melter"""
 
-    DEGREES_TYPE = ["CELSIUS", "KELVIN"]
-    DEFAULT_DEGREES_TYPE = DEGREES_TYPE[1]
+    class DEGREE_TYPES(Enum):
+        CELSIUS = 1
+        KELVIN = 2
+    DEFAULT_DEGREE_TYPE = DEGREE_TYPES.KELVIN
     DEFAULT_NN = 'DNA:DNA'
     DEFAULT_OLIGO = .25e-6
     DEFAULT_RANGE = 10
@@ -393,7 +398,7 @@ class Melter(object):
     ions = MeltingIonCorrector()
     denaturant = MeltingDenaturantCorrector()
     __nnet = NN_TABLES[DEFAULT_NN]
-    __degrees = DEFAULT_DEGREES_TYPE
+    __degrees = DEFAULT_DEGREE_TYPE
     __curve = [DEFAULT_RANGE, DEFAULT_STEP]
 
     def __init__(self):
@@ -422,7 +427,7 @@ class Melter(object):
         return self.__degrees
     @degrees.setter
     def degrees(self, d):
-        assert d in self.DEGREES_TYPE
+        assert d in self.DEGREE_TYPES
         self.__degrees = d
     
     @property
@@ -466,7 +471,7 @@ class Melter(object):
         tm = self.ions.correct(tm, seq)
 
         g = h - (37 + 273.15) * s
-        if self.degrees == self.DEGREES_TYPE[0]:
+        if self.degrees == self.DEGREE_TYPES.CELSIUS:
             tm -= 273.15
         return((name, g, h, s, tm, text))
 
@@ -498,7 +503,7 @@ class Melter(object):
         tm = h / (s + R * np.log(self.__oligo))
 
         g = h - (37 + 273.15) * s
-        if self.degrees == self.DEGREES_TYPE[0] and not forceKelvin:
+        if self.degrees == self.DEGREE_TYPES.CELSIUS and not forceKelvin:
             tm -= 273.15
         return((seq.name, g, h, s, tm, seq.text))
 
@@ -522,7 +527,7 @@ class Melter(object):
         if ntype==type(h) or ntype==type(s) or ntype==type(tm):
             name, g, h, s, tm, text = self.__calculate_standard(seq, True)
 
-        if self.denaturant.mode == self.denaturant.MODES[1]:
+        if self.denaturant.mode == self.denaturant.MODES.WRIGHT:
             tm = self.denaturant.correct(tm, h, s, seq, self.oligo)
             def compute_curve_step(t, h, s, seq):
                 m = self.denaturant.mvalue()
@@ -534,7 +539,7 @@ class Melter(object):
                 t = self.denaturant.correct(t, h, s, seq, self.oligo)
                 return (t, k)
 
-        if self.degrees == self.DEGREES_TYPE[0]:
+        if self.degrees == self.DEGREE_TYPES.CELSIUS:
             parse_tm = lambda x: x - 273.15
         else:
             parse_tm = lambda x: x

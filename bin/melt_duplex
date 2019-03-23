@@ -145,13 +145,10 @@ melter.denaturant.m1 = args.f_mvalue_1
 melter.denaturant.m2 = args.f_mvalue_2
 melter.load_nn_table(args.T)
 if args.celsius:
-    melter.degrees = melter.DEGREES_TYPE[0]
+    melter.degrees = melter.DEGREE_TYPES.CELSIUS
 assert args.curve_range > 0, "temperature range must be positive."
 assert args.curve_step > 0, "temperature step must be positive."
 args.t = check_threads(args.t)
-
-if not args.fasta_like:
-    print("oligo_name\tdG\tdH\tdS\tTm\tSeq")
 
 OH = None
 if not type(None) == type(args.O):
