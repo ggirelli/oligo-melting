@@ -164,7 +164,7 @@ else:
         x = parse_output(x, f)
         print(x)
 
-header = "oligo_name\tdG\tdH\tdS\tTm\tSeq"
+header = "name\tdG\tdH\tdS\tTm\tSeq"
 if not args.fasta_like:
     OH.write("%s\n" % header)
 
