@@ -28,7 +28,10 @@ class Sequence(object):
         self.text = seq
         self.len = len(seq)
         self.rc = self.rc(seq, t)
-        self.fgc = (seq.count('G') + seq.count('C')) / self.len
+        if 0 != self.len:
+            self.fgc = (seq.count('G') + seq.count('C')) / self.len
+        else:
+            self.fgc = 0
         t = t.upper()
         assert t in AB_NA.keys(), "%s not in %s" % (t, list(AB_NA.keys()))
         self.natype = t
