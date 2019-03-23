@@ -228,7 +228,9 @@ melter.load_nn_table(args.T)
 if args.celsius:
     melter.degrees = melter.DEGREE_TYPES.CELSIUS
 assert args.curve_range > 0, "temperature range must be positive."
+melter.curve_range = args.curve_range
 assert args.curve_step > 0, "temperature step must be positive."
+melter.curve_step = args.curve_step
 args.t = check_threads(args.t)
 
 OH = None
