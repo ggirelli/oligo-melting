@@ -165,7 +165,7 @@ else:
         print(x)
 
 header = "name\tdG\tdH\tdS\tTm\tSeq"
-if not args.fasta_like:
+if not args.fasta_like and not type(None) == type(args.O):
     OH.write("%s\n" % header)
 
 if type(None) != type(args.out_curve):
