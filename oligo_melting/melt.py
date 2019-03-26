@@ -15,34 +15,61 @@ import re
 from tqdm import tqdm
 
 R = 1.987 / 1000    # kcal / (K mol)
+class NATYPES(Enum):
+    DNA = 1
+    RNA = 2
 AB_DNA = ["ACGT", "TGCA"]
 AB_RNA = ["ACGU", "UGCA"]
-AB_NA = {"DNA":AB_DNA, "RNA":AB_RNA}
+AB_NA = {NATYPES.DNA:AB_DNA, NATYPES.RNA:AB_RNA}
 
 class Sequence(object):
     """docstring for Sequence"""
 
+    __len = None
+    __fgc = None
+    __rc = None
+
     def __init__(self, seq, t, name = None):
         super(Sequence, self).__init__()
-        seq = seq.upper()
-        self.text = seq
-        self.len = len(seq)
-        self.rc = self.rc(seq, t)
-        if 0 != self.len:
-            self.fgc = (seq.count('G') + seq.count('C')) / self.len
-        else:
-            self.fgc = 0
-        t = t.upper()
-        assert t in AB_NA.keys(), "%s not in %s" % (t, list(AB_NA.keys()))
-        self.natype = t
-        self.ab = AB_NA[t]
-        assert_msg = "sequence alphabet and nucleic acid type mismatch."
-        assert_msg += "\n%s\t%s" % (set(seq), self.ab[0])
-        assert self.check_ab(seq, self.ab), assert_msg
+        self.__text = seq.upper()
+        self.__len = len(self.__text)
+        self.__natype = t
+        self.__ab = AB_NA[t]
         if type(name) == type(None):
-            self.name = "%d-mer" % self.len
+            self.__name = "%d-mer" % self.__len
         else:
-            self.name = name
+            self.__name = name
+
+    @property
+    def text(self):
+        return self.__text
+    @property
+    def len(self):
+        return self.__len
+    @property
+    def rc(self):
+        if type(None) == type(self.__rc):
+            self.__rc = self.mkrc(self.text, self.natype)
+        return self.__rc
+    @property
+    def fgc(self):
+        if type(None) == type(self.__fgc):
+            if 0 != self.__len:
+                self.__fgc = self.__text.count('G')
+                self.__fgc += self.__text.count('C')
+                self.__fgc /= self.__len
+            else:
+                self.__fgc = 0
+        return self.__fgc
+    @property
+    def natype(self):
+        return self.__natype
+    @property
+    def ab(self):
+        return self.__ab
+    @property
+    def name(self):
+        return self.__name
 
     def dimers(self):
         '''Extract NN dimers from sequence.
@@ -53,12 +80,17 @@ class Sequence(object):
         '''
         return self.dimerator(self.text)
 
+    def assert_ab(self):
+        assert_msg = "sequence alphabet and nucleic acid type mismatch."
+        assert_msg += "\n%s\t%s" % (set(self.text), self.ab[0])
+        assert self.check_ab(self.text, self.ab), assert_msg
+
     @staticmethod
     def check_ab(seq, ab):
         return all(x in ab[0] for x in set(seq))
 
     @staticmethod
-    def rc(na, t):
+    def mkrc(na, t):
         '''Calculate reverse complement.
         Args:
             na (string): nucleic acid sequence.
@@ -66,7 +98,7 @@ class Sequence(object):
         Return:
             string: reverse complement of na.
         '''
-        t = t.upper()
+
         assert t in AB_NA.keys(), "%s not in %s" % (t, list(AB_NA.keys()))
         ab = AB_NA[t]
 
@@ -104,7 +136,7 @@ class NNEnergyTable(object):
 
         natypes = natypes.upper()
         assert type(None) != type(re.match("[A-Z]+:[A-Z]+", natypes))
-        assert all([x in NATYPES for x in natypes.split(":")])
+        assert all([x in dir(NATYPES) for x in natypes.split(":")])
         self.__natypes = natypes.split(":")
 
         assert os.path.isfile(path), "'%s' file not found." % path
@@ -171,7 +203,6 @@ class NNEnergyTable(object):
     def ab(self):
         return self.__ab.copy()
 
-NATYPES = ("DNA", "RNA")
 NN_TABLES_PATH = {
     # Table from Freier et al, PNAS(83), 1986 - in 1 M NaCl [RNA]
     "RNA:RNA" : "nntables/freier.tsv",
@@ -460,7 +491,8 @@ class Melter(object):
                    temperature, and sequence
         '''
         if not type(seq) == Sequence:
-            seq = Sequence(seq, self.nnet.natypes[0])
+            seq = Sequence(seq, NATYPES[self.nnet.natypes[0]])
+        seq.assert_ab()
 
         # 1 M NaCl case; SantaLucia, PNAS(95), 1998
         name, g, h, s, tmStd, text = self.__calculate_standard(seq, True)
@@ -524,7 +556,8 @@ class Melter(object):
         '''
 
         if not type(seq) == Sequence:
-            seq = Sequence(seq, self.nnet.natypes[0])
+            seq = Sequence(seq, NATYPES[self.nnet.natypes[0]])
+        seq.assert_ab()
         
         ntype = type(None)
         if ntype==type(h) or ntype==type(s) or ntype==type(tm):
