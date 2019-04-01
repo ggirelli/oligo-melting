@@ -173,13 +173,15 @@ if type(None) != type(args.out_curve):
         os.remove(args.out_curve)
     COH = open(args.out_curve, "a+")
 
+NATYPE = om.NATYPES[args.T.split(":")[0]]
+
 if os.path.isfile(args.input):
     IH = open(args.input, "r")
     if 1 == args.t:
         if not args.fasta_like:
             print(header)
         for record in SimpleFastaParser(IH):
-            seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
+            seq = om.Sequence(record[1], NATYPE, record[0])
             data = melter.calculate(seq)
             pout(data, args.fasta_like, OH)
             if type(None) != type(args.out_curve):
@@ -189,13 +191,13 @@ if os.path.isfile(args.input):
     else:
         if type(None) != type(args.out_curve):
             def calc_melting(record):
-                seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
+                seq = om.Sequence(record[1], NATYPE, record[0])
                 curve = pd.DataFrame(melter.melting_curve(seq))
                 curve['name'] = record[0]
                 return {"melt" : melter.calculate(seq), "curve" : curve}
         else:
             def calc_melting(record):
-                seq = om.Sequence(record[1], args.T.split(":")[0], record[0])
+                seq = om.Sequence(record[1], NATYPE, record[0])
                 return {"melt" : melter.calculate(seq)}
 
         data = Parallel(n_jobs = args.t, verbose = 11)(
