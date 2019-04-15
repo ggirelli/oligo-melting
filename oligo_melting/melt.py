@@ -71,6 +71,13 @@ class Sequence(object):
     def name(self):
         return self.__name
 
+    def __eq__(self, other):
+        if not isinstance(other, Sequence): return False
+        if not self.text == other.text: return False
+        if not self.name == other.name: return False
+        if not self.natype == other.natype: return False
+        return True
+
     def dimers(self):
         '''Extract NN dimers from sequence.
         Args:
