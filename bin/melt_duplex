@@ -183,7 +183,6 @@ def run_fasta(fpath, **kwargs):
     for record in SimpleFastaParser(IH):
         output = OligoMelt.Duplex.calc_tm_record(record, **kwargs)
         if kwargs['fasta_like']: print(">%s\n%s" % tuple(output))
-        else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
     # Close connection to input file
     IH.close()

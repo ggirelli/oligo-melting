@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+##[2.0.1.post4]
 ### Added
 - Version control of scripts and `--version` flag.
 - `melt_duplex` output in FASTA format.
@@ -15,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Proper script help page formatting.
+- Bug that duplicated every line in the output.
 
 
 
