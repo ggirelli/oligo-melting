@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-##[2.0.1.post4]
+##[2.0.1.post5]
 ### Added
 - Version control of scripts and `--version` flag.
 - `melt_duplex` output in FASTA format.

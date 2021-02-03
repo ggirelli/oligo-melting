@@ -1,4 +1,4 @@
-oligo-melting v2.0.1.post4
+oligo-melting v2.0.1.post5
 ===
 
 A Python3 package for melting temperature calculation of oligonucleotides hybridization and secondary structures.
