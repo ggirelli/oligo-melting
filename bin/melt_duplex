@@ -35,6 +35,7 @@ import re
 import sys
 
 import oligo_melting as OligoMelt
+from oligo_melting.const import __version__
 
 # PARAMETERS ===================================================================
 
@@ -126,9 +127,8 @@ parser.add_argument('-v', '--verbose',
     help = 'Verbose output.')
 
 # Version flag
-version = "2.0.0"
 parser.add_argument('--version', action = 'version',
-    version = '%s v%s' % (sys.argv[0], version,))
+    version = '%s v%s' % (sys.argv[0], __version__,))
 
 # Parse arguments
 args = parser.parse_args()

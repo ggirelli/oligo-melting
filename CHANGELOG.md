@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [2.0.2]
+### Fixed
+- Typo in `melt_duplex`.
+- Duplicated output from `melt_duplex` when `-F` is not used.
+
+### Changed
+- Version tag now stored in const module.
+
+
+
 ##[2.0.1.post5]
 ### Added
 - Version control of scripts and `--version` flag.
