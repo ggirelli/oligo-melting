@@ -158,12 +158,13 @@ def run_seq(seq, **kwargs):
     kwargs.update([('name', 'seq'), ('seq', seq)])
 
     # Calculate Tm
-    output = OligoMelt.XDuplex.calc_tm(**kwargs)
+    print_header(**kwargs)
+    kwargs['silent'] = True
+    output = OligoMelt.Duplex.calc_tm(**kwargs)
 
     # Print output
-    print_header(fasta_like = fasta_like, **kwargs)
     d = kwargs['fasta_delim']
-    if fasta_like: print(">seq tm%s%.2f;\n%s" % (d, output[4], seq))
+    if kwargs['fasta_like']: print(">seq tm%s%.2f;\n%s" % (d, output[4], seq))
     else: print("%s\t%f\t%f\t%f\t%f\t%s" % output)
 
 def run_fasta(fpath, **kwargs):
