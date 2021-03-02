@@ -6,7 +6,7 @@ https://github.com/pypa/sampleproject
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+from setuptools import setup  # type: ignore
 
 # To use a consistent encoding
 from codecs import open
@@ -15,14 +15,14 @@ import os
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the README file
-with open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
+with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
     name="oligo_melting",
     version="2.0.2",
     description="""A Python3 package for melting temperature calculation of
-		oligonucleotides hybridization and secondary structures.""",
+        oligonucleotides hybridization and secondary structures.""",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ggirelli/oligo-melting",
