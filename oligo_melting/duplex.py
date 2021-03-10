@@ -857,7 +857,7 @@ def calc_tm_record(record, **kwargs):
         tuple: (header, seq) if kwargs['fasta_like'].
     """
     record = list(record)
-    kwargs.update([("name", record[0].split(" ")[0]), ("seq", record[1])])
+    kwargs.update([("name", record[0]), ("seq", record[1])])
 
     # Calculate Tm
     output = OligoMelt.Duplex.calc_tm(**kwargs)
