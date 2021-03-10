@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+
+## [2.0.2.post1]
+### Changed
+- Retaining FASTA header comments in output.
+
+
 ## [2.0.2]
 ### Fixed
 - Typo in `melt_duplex`.

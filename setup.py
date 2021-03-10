@@ -20,7 +20,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="oligo_melting",
-    version="2.0.2",
+    version="2.0.2.post1",
     description="""A Python3 package for melting temperature calculation of
         oligonucleotides hybridization and secondary structures.""",
     long_description=long_description,
