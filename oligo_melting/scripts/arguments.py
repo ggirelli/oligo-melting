@@ -4,7 +4,7 @@
 """
 
 import argparse
-from oligo_melting.const import __version__
+from oligo_melting import __version__
 import sys
 
 # import multiprocessing as mp
