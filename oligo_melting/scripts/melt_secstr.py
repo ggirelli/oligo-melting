@@ -108,7 +108,7 @@ def parse_arguments(args: argparse.Namespace) -> argparse.Namespace:
     assert args.f >= 0, "concentration cannot be negative."
     assert args.curve_range > 0, "temperature range must be positive."
     assert args.curve_step > 0, "temperature step must be positive."
-    args.t = min(mp.cpu_count(), args.t)
+    args.t = max(1, min(args.t, mp.cpu_count()))
     return args
 
 
