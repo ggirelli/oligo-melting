@@ -11,9 +11,9 @@ from oligo_melting.melt import Melter, MeltingIonCorrector, MeltingDenaturantCor
 from oligo_melting.sequence import Sequence
 from oligo_melting.scripts import arguments as ap
 from Bio.SeqIO.FastaIO import SimpleFastaParser  # type: ignore
-from ggc.args import check_threads  # type: ignore
 from joblib import Parallel, delayed  # type: ignore
 import logging
+import multiprocessing as mp
 import os
 import pandas as pd  # type: ignore
 from tqdm import tqdm  # type: ignore
@@ -188,21 +188,21 @@ References:
     return parser
 
 
-def parse_output(args: argparse.Namespace, x, fasta_like=False):
-    if fasta_like:
+def parse_output(args: argparse.Namespace, x):
+    if args.fasta_like:
         return ">%s tm%s%.2f\n%s" % (x[0], args.delim, x[4], x[-1])
     else:
         return "%s\t%.3f\t%.3f\t%.3f\t%.2f\t%s" % x
 
 
-def parse_print_and_write(args: argparse.Namespace, x, f, OH):
-    x = parse_output(args, x, f)
+def parse_print_and_write(args: argparse.Namespace, x):
+    x = parse_output(args, x)
     print(x)
-    OH.write("%s\n" % x)
+    args.OH.write("%s\n" % x)
 
 
-def parse_and_print(args: argparse.Namespace, x, f, OH):
-    x = parse_output(args, x, f)
+def parse_and_print(args: argparse.Namespace, x):
+    x = parse_output(args, x)
     print(x)
 
 
@@ -226,7 +226,7 @@ def parse_arguments(args: argparse.Namespace) -> argparse.Namespace:
     assert args.f >= 0, "concentration cannot be negative."
     assert args.curve_range > 0, "temperature range must be positive."
     assert args.curve_step > 0, "temperature step must be positive."
-    args.t = check_threads(args.t)
+    args.t = min(mp.cpu_count(), args.t)
 
     args.OH = None
     if args.O is not None:
@@ -272,7 +272,7 @@ def run_single_thread(args, NATYPE, melter):
     for record in SimpleFastaParser(args.IH):
         seq = Sequence(record[1], NATYPE, record[0])
         data = melter.calculate(seq)
-        args.pout(data, args.fasta_like, args.OH)
+        args.pout(args, data)
         if args.out_curve is not None:
             curve = pd.DataFrame(melter.melting_curve(seq))
             curve["name"] = data[0]
@@ -288,17 +288,17 @@ def run_parallel(args, NATYPE, melter):
         print(args.header)
     if args.out_curve is not None:
         for record in tqdm(data):
-            args.pout(record["melt"], args.fasta_like, args.OH)
+            args.pout(args, record["melt"])
     else:
         for record in tqdm(data):
-            args.pout(record["melt"], args.fasta_like, args.OH)
+            args.pout(args, record["melt"])
             record["curve"].to_csv(args.COH, "\t", index=False, header=False)
     return data
 
 
 def run_single_sequence(args, melter):
     data = melter.calculate(args.input)
-    args.pout(data, args.fasta_like, args.OH)
+    args.pout(args, data)
     if args.out_curve is not None:
         curve = pd.DataFrame(melter.melting_curve(args.input))
         curve["name"] = data[0]
@@ -332,4 +332,3 @@ def run(args: argparse.Namespace) -> None:
         run_single_sequence(args, melter)
 
     close_handles(args)
-    logging.info("That's all! :smiley:")

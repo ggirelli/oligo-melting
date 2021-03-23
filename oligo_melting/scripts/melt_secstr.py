@@ -10,9 +10,9 @@ from oligo_melting.entab import NN_TABLES
 from oligo_melting.melt import Melter
 from oligo_melting.sequence import Sequence
 from oligo_melting.scripts import arguments as ap
-from ggc.args import check_threads  # type: ignore
 from joblib import delayed, Parallel  # type: ignore
 import logging
+import multiprocessing as mp
 import os
 import pandas as pd  # type: ignore
 from tqdm import tqdm  # type: ignore
@@ -108,7 +108,7 @@ def parse_arguments(args: argparse.Namespace) -> argparse.Namespace:
     assert args.f >= 0, "concentration cannot be negative."
     assert args.curve_range > 0, "temperature range must be positive."
     assert args.curve_step > 0, "temperature step must be positive."
-    args.t = check_threads(args.t)
+    args.t = min(mp.cpu_count(), args.t)
     return args
 
 

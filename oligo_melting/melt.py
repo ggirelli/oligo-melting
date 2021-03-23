@@ -167,7 +167,7 @@ class MeltingDenaturantCorrector(object):
 
     @mode.setter
     def mode(self, mode):
-        assert mode in self.MODES
+        assert mode in const.DENATURANT_MODES
         self.__mode = mode
 
     def mcconaughy_correction(self, tm, conc0=0, **kwargs):
@@ -258,7 +258,7 @@ class Melter(object):
 
     @degrees.setter
     def degrees(self, d):
-        assert d in self.DEGREE_TYPES
+        assert d in const.DEGREE_TYPES
         self.__degrees = d
 
     @property
@@ -305,7 +305,7 @@ class Melter(object):
         tm = self.ions.correct(tm, seq)
 
         g = h - (37 + 273.15) * s
-        if self.degrees == self.DEGREE_TYPES.CELSIUS:
+        if self.degrees == const.DEGREE_TYPES.CELSIUS:
             tm -= 273.15
         return (name, g, h, s, tm, text)
 
@@ -337,7 +337,7 @@ class Melter(object):
         tm = h / (s + const.R * np.log(self.__oligo))
 
         g = h - (37 + 273.15) * s
-        if self.degrees == self.DEGREE_TYPES.CELSIUS and not forceKelvin:
+        if self.degrees == const.DEGREE_TYPES.CELSIUS and not forceKelvin:
             tm -= 273.15
         return (seq.name, g, h, s, tm, seq.text)
 
