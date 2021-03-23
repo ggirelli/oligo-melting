@@ -1,22 +1,24 @@
-
-'''
+"""
 @author: Gabriele Girelli
 @contact: gigi.ga90@gmail.com
-'''
+"""
 
-import oligo_melting as om
+from oligo_melting.const import AB_NA, NATYPES
+from oligo_melting.sequence import Sequence
 
 
 def test_seq():
-    assert om.Sequence.check_ab("ACTG", om.AB_NA["DNA"])
-    assert om.Sequence.check_ab("ACUG", om.AB_NA["RNA"])
-    assert "CAGT" == om.Sequence.rc("ACTG", "DNA")
-    assert "CUGT" == om.Sequence.rc("ACUG", "RNA")
-    assert ["CU", "UG", "GT"] == om.Sequence.dimerator("CUGT")
+    assert Sequence.check_ab("ACTG", AB_NA[NATYPES["DNA"]])
+    assert Sequence.check_ab("ACUG", AB_NA[NATYPES["RNA"]])
+    assert "CAGT" == Sequence("ACTG", NATYPES["DNA"]).rc
+    assert "CAGU" == Sequence("ACUG", NATYPES["RNA"]).rc
+    assert ["CU", "UG", "GT"] == [dimer for dimer in Sequence.dimerator("CUGT")]
+
 
 def test_nnet():
     # Test NNET building class
     pass
+
 
 def test_ions():
     # Test single monovalent correction
@@ -24,12 +26,14 @@ def test_ions():
     # Test workflow for ions correction
     pass
 
+
 def test_denaturants():
     # Test McConaughy correction
     # Test mvalue calculation
     # Test Wright correction with m1 only
     # Test Wrihgt correction with m1 and m2
     pass
+
 
 def test_melter():
     # Test standard ([Na+] = 1 M) Tm calculation

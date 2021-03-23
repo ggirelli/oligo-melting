@@ -5,242 +5,10 @@
               single-strand oligonucleotide secondary structures.
 """
 
-from enum import Enum
-import numpy as np
-import os
-import pandas as pd
-import pkg_resources
-import re
-from tqdm import tqdm
-
-R = 1.987 / 1000  # kcal / (K mol)
-
-
-class NATYPES(Enum):
-    DNA = 1
-    RNA = 2
-
-
-AB_DNA = ["ACGT", "TGCA"]
-AB_RNA = ["ACGU", "UGCA"]
-AB_NA = {NATYPES.DNA: AB_DNA, NATYPES.RNA: AB_RNA}
-
-
-class Sequence(object):
-    """docstring for Sequence"""
-
-    __len = None
-    __fgc = None
-    __rc = None
-
-    def __init__(self, seq, t, name=None):
-        super(Sequence, self).__init__()
-        self.__text = seq.upper()
-        self.__len = len(self.__text)
-        self.__natype = t
-        self.__ab = AB_NA[t]
-        if type(name) == type(None):
-            self.__name = "%d-mer" % self.__len
-        else:
-            self.__name = name
-
-    @property
-    def text(self):
-        return self.__text
-
-    @property
-    def len(self):
-        return self.__len
-
-    @property
-    def rc(self):
-        if type(None) == type(self.__rc):
-            self.__rc = self.mkrc(self.text, self.natype)
-        return self.__rc
-
-    @property
-    def fgc(self):
-        if type(None) == type(self.__fgc):
-            if 0 != self.__len:
-                self.__fgc = self.__text.count("G")
-                self.__fgc += self.__text.count("C")
-                self.__fgc /= self.__len
-            else:
-                self.__fgc = 0
-        return self.__fgc
-
-    @property
-    def natype(self):
-        return self.__natype
-
-    @property
-    def ab(self):
-        return self.__ab
-
-    @property
-    def name(self):
-        return self.__name
-
-    def __eq__(self, other):
-        if not self.text == other.text:
-            return False
-        if not self.name == other.name:
-            return False
-        if not self.natype == other.natype:
-            return False
-        return True
-
-    def dimers(self):
-        """Extract NN dimers from sequence.
-        Args:
-            seq (str): nucleic acid sequence.
-        Returns:
-            list: NN dimers.
-        """
-        return self.dimerator(self.text)
-
-    def assert_ab(self):
-        assert_msg = "sequence alphabet and nucleic acid type mismatch."
-        assert_msg += "\n%s\t%s" % (set(self.text), self.ab[0])
-        assert self.check_ab(self.text, self.ab), assert_msg
-
-    @staticmethod
-    def check_ab(seq, ab):
-        return all(x in ab[0] for x in set(seq))
-
-    @staticmethod
-    def mkrc(na, t):
-        """Calculate reverse complement.
-        Args:
-            na (string): nucleic acid sequence.
-            t (string): nucleic acid type, either 'dna' or 'rna'.
-        Return:
-            string: reverse complement of na.
-        """
-
-        assert t in AB_NA.keys(), "%s not in %s" % (t, list(AB_NA.keys()))
-        ab = AB_NA[t]
-
-        rab = ab[1].strip().lower()
-        ab = ab[0].strip().lower()
-        na = na.lower()
-
-        for c in na:
-            assert_msg = "provided string conflicts with selected alphabet."
-            assert_msg += " (%s in %s)" % (c, na)
-            assert c in ab, assert_msg
-
-        r = na[::-1]
-        rc = []
-        for c in r:
-            rc.append(rab[ab.index(c)])
-        rc = "".join([str(c) for c in rc]).upper()
-
-        return rc
-
-    @staticmethod
-    def dimerator(seq):
-        """Extract NN dimers from sequence.
-        Args:
-            seq (str): nucleic acid sequence.
-        Returns:
-            list: NN dimers.
-        """
-        return (seq[i : (i + 2)] for i in range(len(seq) - 1))
-
-
-class NNEnergyTable(object):
-    """docstring for NNEnergyTable"""
-
-    def __init__(self, path, natypes):
-        super(NNEnergyTable, self).__init__()
-
-        natypes = natypes.upper()
-        assert type(None) != type(re.match("[A-Z]+:[A-Z]+", natypes))
-        assert all([x in dir(NATYPES) for x in natypes.split(":")])
-        self.__natypes = natypes.split(":")
-
-        assert os.path.isfile(path), "'%s' file not found." % path
-        self.__table = pd.read_csv(path, "\t", index_col=0, names=["dH0", "dS0", "dG0"])
-
-        self.has_init = "init" in self.__table.index
-        if self.has_init:
-            self.__init = self.__table.loc["init", :].to_dict()
-            self.__table.drop("init", axis=0)
-
-        self.has_sym = "sym" in self.__table.index
-        if self.has_sym:
-            self.__sym = self.__table.loc["sym", :].to_dict()
-            self.__table.drop("sym", axis=0)
-
-        self.has_end = any([x.startswith("end") for x in self.__table.index])
-        if self.has_end:
-            endRows = [x for x in self.__table.index if x.startswith("end")]
-            self.__end = self.__table.loc[endRows, :]
-            self.__table.drop(endRows, axis=0)
-            self.__end.index = [x[-1] for x in self.__end.index]
-            self.__end = self.__end.to_dict()
-
-        self.__ab = set("".join([x for x in self.__table.index if 2 == len(x)]))
-        self.__table = self.__table.to_dict()
-
-    @property
-    def natypes(self):
-        return self.__natypes
-
-    @property
-    def tt(self):
-        return self.__table
-
-    @property
-    def dH0(self):
-        return self.__table["dH0"]
-
-    @property
-    def dS0(self):
-        return self.__table["dS0"]
-
-    @property
-    def dG0(self):
-        return self.__table["dG0"]
-
-    @property
-    def end(self):
-        if self.has_end:
-            return self.__end.copy()
-
-    @property
-    def sym(self):
-        if self.has_sym:
-            return self.__sym.copy()
-
-    @property
-    def init(self):
-        if self.has_init:
-            return self.__init.copy()
-
-    @property
-    def ab(self):
-        return self.__ab.copy()
-
-
-NN_TABLES_PATH = {
-    # Table from Freier et al, PNAS(83), 1986 - in 1 M NaCl [RNA]
-    "RNA:RNA": "nntables/freier.tsv",
-    # Table from Sugimoto et al, Biochemistry(34), 1995 - in 1 M NaCl [DNA:RNA]
-    # For calculation from the DNA sequence 5'-to-3'
-    "DNA:RNA": "nntables/sugimoto_2.tsv",
-    # Table from Sugimoto et al, Biochemistry(34), 1995 - in 1 M NaCl [DNA:RNA]
-    # For calculation from the RNA sequence 5'-to-3'
-    "RNA:DNA": "nntables/sugimoto_1.tsv",
-    # Table from Allawi&Santalucia, Biochemistry(36), 1997 - in 1 M NaCl [DNA]
-    "DNA:DNA": "nntables/allawy.tsv",
-}
-PKGROOT = pkg_resources.resource_filename("oligo_melting", "")
-NN_TABLES = [
-    NNEnergyTable(os.path.join(PKGROOT, v), k) for k, v in NN_TABLES_PATH.items()
-]
-NN_TABLES = dict([(":".join(x.natypes), x) for x in NN_TABLES])
+import numpy as np  # type: ignore
+from oligo_melting import const
+from oligo_melting.entab import NN_TABLES, NNEnergyTable
+from oligo_melting.sequence import Sequence  # type: ignore
 
 
 class MeltingIonCorrector(object):
@@ -332,18 +100,21 @@ class MeltingIonCorrector(object):
 
         return tm
 
+    def __correct_multivalent(self, tm, seq, mono_conc0=1):
+        ionRatio = np.sqrt(self.__di) / self.__mono
+        if ionRatio < 0.22:
+            return self.correct_monovalent(tm, seq, mono_conc0)
+        elif ionRatio < 6:
+            return self.correct_divalent(tm, seq, True)
+        else:
+            return self.correct_divalent(tm, seq)
+
     def correct(self, tm, seq, mono_conc0=1):
         if 0 < self.__di:
             if 0 == self.__mono:
                 return self.correct_divalent(tm, seq)
             else:
-                ionRatio = np.sqrt(self.__di) / self.__mono
-                if ionRatio < 0.22:
-                    return self.correct_monovalent(tm, seq, mono_conc0)
-                elif ionRatio < 6:
-                    return self.correct_divalent(tm, seq, True)
-                else:
-                    return self.correct_divalent(tm, seq)
+                return self.__correct_multivalent(tm, seq, mono_conc0)
         elif 0 < self.__mono:
             return self.correct_monovalent(tm, seq, mono_conc0)
         else:
@@ -353,11 +124,7 @@ class MeltingIonCorrector(object):
 class MeltingDenaturantCorrector(object):
     """docstring for MeltingDenaturantCorrector"""
 
-    class MODES(Enum):
-        MCCONAUGHY = 1
-        WRIGHT = 2
-
-    DEFAULT_MODE = MODES.MCCONAUGHY
+    DEFAULT_MODE = const.DENATURANT_MODES.MCCONAUGHY
     DEFAULT_CONC = 0
     DEFAULT_M1 = 0.1734
     DEFAULT_M2 = 0
@@ -436,10 +203,10 @@ class MeltingDenaturantCorrector(object):
         if 0 == deltaDenaturant:
             return tm
 
-        tm = (h + self.mvalue() * deltaDenaturant) / (R * np.log(oligo) + s)
+        tm = (h + self.mvalue(seq) * deltaDenaturant) / (const.R * np.log(oligo) + s)
         return tm
 
-    def mvalue(self):
+    def mvalue(self, seq):
         return self.__m1 if 0 == self.__m2 else self.__m1 * seq.len + self.__m2
 
     def correct(self, tm, h, s, seq, oligo, conc0=0):
@@ -449,13 +216,7 @@ class MeltingDenaturantCorrector(object):
 
 
 class Melter(object):
-    """docstring for Melter"""
-
-    class DEGREE_TYPES(Enum):
-        CELSIUS = 1
-        KELVIN = 2
-
-    DEFAULT_DEGREE_TYPE = DEGREE_TYPES.KELVIN
+    DEFAULT_DEGREE_TYPE = const.DEGREE_TYPES.KELVIN
     DEFAULT_NN = "DNA:DNA"
     DEFAULT_OLIGO = 0.25e-6
     DEFAULT_RANGE = 10
@@ -529,7 +290,7 @@ class Melter(object):
                    temperature, and sequence
         """
         if not type(seq) == Sequence:
-            seq = Sequence(seq, NATYPES[self.nnet.natypes[0]])
+            seq = Sequence(seq, const.NATYPES[self.nnet.natypes[0]])
         seq.assert_ab()
 
         # 1 M NaCl case; SantaLucia, PNAS(95), 1998
@@ -573,12 +334,46 @@ class Melter(object):
             s += self.__nnet.sym["dS0"]
         s /= 1e3
 
-        tm = h / (s + R * np.log(self.__oligo))
+        tm = h / (s + const.R * np.log(self.__oligo))
 
         g = h - (37 + 273.15) * s
         if self.degrees == self.DEGREE_TYPES.CELSIUS and not forceKelvin:
             tm -= 273.15
         return (seq.name, g, h, s, tm, seq.text)
+
+    def __compute_curve_step_with_mvalue(self, t, h, s, seq):
+        m = self.denaturant.mvalue()
+        k = self.__dissoc_fraction(t, h, s, m * self.denaturant.conc)
+        return (t, k)
+
+    def __compute_curve_step_with_correction(self, t, h, s, seq):
+        k = self.__dissoc_fraction(t, h, s, 0)
+        t = self.denaturant.correct(t, h, s, seq, self.oligo)
+        return (t, k)
+
+    def __run_melting_curve(self, seq, h=None, s=None, tm=None, correctIons=True):
+        tmparser = (
+            (lambda x: x - 273.15)
+            if self.degrees == self.DEGREE_TYPES.CELSIUS
+            else (lambda x: x)
+        )
+        if self.denaturant.mode == self.denaturant.MODES.WRIGHT:
+            tm = self.denaturant.correct(tm, h, s, seq, self.oligo)
+            curvec = self.__compute_curve_step_with_mvalue
+        else:
+            curvec = self.__compute_curve_step_with_correction
+        curve = []
+        tstart = tm - self.curve_range / 2
+        if correctIons:
+            for ti in range(int(self.curve_range / self.curve_step)):
+                t, f = curvec(tstart + self.curve_step * ti, h, s, seq)
+                t = self.ions.correct(t, seq)
+                curve.append((tmparser(t), f))
+        else:
+            for ti in range(int(self.curve_range / self.curve_step)):
+                t, f = curvec(tstart + self.curve_step * ti, h, s, seq)
+                curve.append((tmparser(t), f))
+        return curve
 
     def melting_curve(self, seq, h=None, s=None, tm=None, correctIons=True):
         """Generate melting curve.
@@ -593,46 +388,14 @@ class Melter(object):
         """
 
         if not type(seq) == Sequence:
-            seq = Sequence(seq, NATYPES[self.nnet.natypes[0]])
+            seq = Sequence(seq, const.NATYPES[self.nnet.natypes[0]])
         seq.assert_ab()
 
         ntype = type(None)
         if ntype == type(h) or ntype == type(s) or ntype == type(tm):
             name, g, h, s, tm, text = self.__calculate_standard(seq, True)
 
-        if self.denaturant.mode == self.denaturant.MODES.WRIGHT:
-            tm = self.denaturant.correct(tm, h, s, seq, self.oligo)
-
-            def compute_curve_step(t, h, s, seq):
-                m = self.denaturant.mvalue()
-                k = self.__dissoc_fraction(t, h, s, m * self.denaturant.conc)
-                return (t, k)
-
-        else:
-
-            def compute_curve_step(t, h, s, seq):
-                k = self.__dissoc_fraction(t, h, s, 0)
-                t = self.denaturant.correct(t, h, s, seq, self.oligo)
-                return (t, k)
-
-        if self.degrees == self.DEGREE_TYPES.CELSIUS:
-            parse_tm = lambda x: x - 273.15
-        else:
-            parse_tm = lambda x: x
-
-        curve = []
-        tstart = tm - self.curve_range / 2
-        if correctIons:
-            for ti in range(int(self.curve_range / self.curve_step)):
-                t, f = compute_curve_step(tstart + self.curve_step * ti, h, s, seq)
-                t = self.ions.correct(t, seq)
-                curve.append((parse_tm(t), f))
-        else:
-            for ti in range(int(self.curve_range / self.curve_step)):
-                t, f = compute_curve_step(tstart + self.curve_step * ti, h, s, seq)
-                curve.append((parse_tm(t), f))
-
-        curve = np.array(curve)
+        curve = np.array(self.__run_melting_curve(seq, h, s, tm, correctIons))
 
         return curve
 
@@ -647,5 +410,5 @@ class Melter(object):
             float: dissociated fraction
         """
         dg = h - t * s + gplus
-        factor = np.exp(-dg / (R * t)) * self.oligo
+        factor = np.exp(-dg / (const.R * t)) * self.oligo
         return 1 / (1 + factor)
