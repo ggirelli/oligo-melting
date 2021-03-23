@@ -5,8 +5,6 @@
 
 from enum import Enum
 
-__version__ = "3.0.0"
-
 R = 1.987 / 1000  # kcal / (K mol)
 
 

@@ -4,7 +4,7 @@
 """
 
 import argparse
-from oligo_melting.const import __version__
+from oligo_melting import __version__
 from oligo_melting.scripts import arguments as ap
 from oligo_melting import scripts
 import sys
