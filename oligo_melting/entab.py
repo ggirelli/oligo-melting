@@ -6,7 +6,7 @@
 from oligo_melting.const import NATYPES, NN_TABLES_PATH
 import os
 import pandas as pd  # type: ignore
-import pkg_resources
+import pkg_resources  # type: ignore
 import re
 
 
