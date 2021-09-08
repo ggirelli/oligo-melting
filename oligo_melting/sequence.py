@@ -57,9 +57,7 @@ class Sequence(object):
         return self.__name
 
     def __eq__(self, other):
-        if any(
-            attrname not in dir(other) for attrname in ["text", "name", "natype"]
-        ):
+        if any(attrname not in dir(other) for attrname in ["text", "name", "natype"]):
             return False
         if not self.text == other.text:
             return False

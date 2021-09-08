@@ -12,7 +12,6 @@ from oligo_melting.sequence import Sequence
 from oligo_melting.scripts import arguments as ap
 from Bio.SeqIO.FastaIO import SimpleFastaParser  # type: ignore
 from joblib import Parallel, delayed  # type: ignore
-import logging
 import multiprocessing as mp
 import os
 import pandas as pd  # type: ignore
