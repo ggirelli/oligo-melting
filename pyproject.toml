@@ -28,7 +28,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.7.1"
+python = "^3.8"
 biopython = "^1.78"
 joblib = "^1.0.1"
 numpy = "^1.20.1"
