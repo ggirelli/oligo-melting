@@ -16,7 +16,7 @@ class NNEnergyTable(object):
 
         natypes = natypes.upper()
         assert re.match("[A-Z]+:[A-Z]+", natypes) is not None
-        assert all([x in dir(NATYPES) for x in natypes.split(":")])
+        assert all(x in dir(NATYPES) for x in natypes.split(":"))
         self.__natypes = natypes.split(":")
 
         assert os.path.isfile(path), "'%s' file not found." % path
@@ -32,7 +32,7 @@ class NNEnergyTable(object):
             self.__sym = self.__table.loc["sym", :].to_dict()
             self.__table.drop("sym", axis=0)
 
-        self.has_end = any([x.startswith("end") for x in self.__table.index])
+        self.has_end = any(x.startswith("end") for x in self.__table.index)
         if self.has_end:
             endRows = [x for x in self.__table.index if x.startswith("end")]
             self.__end = self.__table.loc[endRows, :]
@@ -40,7 +40,7 @@ class NNEnergyTable(object):
             self.__end.index = [x[-1] for x in self.__end.index]
             self.__end = self.__end.to_dict()
 
-        self.__ab = set("".join([x for x in self.__table.index if 2 == len(x)]))
+        self.__ab = set("".join(x for x in self.__table.index if len(x) == 2))
         self.__table = self.__table.to_dict()
 
     @property
