@@ -121,7 +121,7 @@ def run_melting(args, melter):
     data = pd.read_csv(args.input, "\t")
 
     colList = ["Tm"]
-    assert all([x in data.columns for x in colList])
+    assert all(x in data.columns for x in colList)
     if args.t == 1:
         for ri in tqdm(data.index):
             data.loc[ri, "Tm"] = melter.denaturant.mcconaughy_correction(

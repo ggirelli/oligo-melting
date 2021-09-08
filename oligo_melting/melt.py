@@ -57,10 +57,10 @@ class MeltingIonCorrector(object):
         b = 3.95e-5
         c = 9.4e-6
         tm = 1.0 / tm
-        if 1 == self.__mono:
+        if self.__mono == 1:
             tm -= (a * seq.fgc - b) * np.log(conc0 / self.__mono)
             tm -= c * (np.log(conc0 / self.__mono) ** 2)
-        elif 0 < self.__mono:
+        elif self.__mono > 0:
             tm += (a * seq.fgc - b) * np.log(self.__mono / conc0)
             tm += c * (np.log(self.__mono / conc0) ** 2)
         tm = 1.0 / tm
@@ -110,12 +110,12 @@ class MeltingIonCorrector(object):
             return self.correct_divalent(tm, seq)
 
     def correct(self, tm, seq, mono_conc0=1):
-        if 0 < self.__di:
-            if 0 == self.__mono:
+        if self.__di > 0:
+            if self.__mono == 0:
                 return self.correct_divalent(tm, seq)
             else:
                 return self.__correct_multivalent(tm, seq, mono_conc0)
-        elif 0 < self.__mono:
+        elif self.__mono > 0:
             return self.correct_monovalent(tm, seq, mono_conc0)
         else:
             return tm
@@ -142,7 +142,7 @@ class MeltingDenaturantCorrector(object):
 
     @conc.setter
     def conc(self, conc):
-        assert 0 <= conc and 100 >= conc
+        assert conc >= 0 and conc <= 100
         self.__denaturant = conc
 
     @property
@@ -180,7 +180,7 @@ class MeltingDenaturantCorrector(object):
           float: corrected melting temperature.
         """
         deltaDenaturant = self.__denaturant - conc0
-        if 0 == deltaDenaturant:
+        if deltaDenaturant == 0:
             return tm
         else:
             tm -= 0.72 * deltaDenaturant
@@ -200,14 +200,14 @@ class MeltingDenaturantCorrector(object):
           float: corrected melting temperature.
         """
         deltaDenaturant = self.__denaturant - conc0
-        if 0 == deltaDenaturant:
+        if deltaDenaturant == 0:
             return tm
 
         tm = (h + self.mvalue(seq) * deltaDenaturant) / (const.R * np.log(oligo) + s)
         return tm
 
     def mvalue(self, seq):
-        return self.__m1 if 0 == self.__m2 else self.__m1 * seq.len + self.__m2
+        return self.__m1 if self.__m2 == 0 else self.__m1 * seq.len + self.__m2
 
     def correct(self, tm, h, s, seq, oligo, conc0=0):
         return getattr(self, "%s_correction" % self.__mode.name.lower())(
@@ -289,7 +289,7 @@ class Melter(object):
             tuple: sequence name, hybridization enthalpy, enthropy, melting
                    temperature, and sequence
         """
-        if not type(seq) == Sequence:
+        if type(seq) != Sequence:
             seq = Sequence(seq, const.NATYPES[self.nnet.natypes[0]])
         seq.assert_ab()
 
@@ -319,8 +319,8 @@ class Melter(object):
                    temperature, and sequence
         """
 
-        h = sum([self.__nnet.dH0[c] for c in seq.dimers()])
-        s = sum([self.__nnet.dS0[c] for c in seq.dimers()])
+        h = sum(self.__nnet.dH0[c] for c in seq.dimers())
+        s = sum(self.__nnet.dS0[c] for c in seq.dimers())
         if self.__nnet.has_end:
             h += self.__nnet.end["dH0"][seq.text[0]]
             h += self.__nnet.end["dH0"][seq.text[-1]]
@@ -387,17 +387,15 @@ class Melter(object):
             list of tuples: [(temperature, dissociated fraction), ...]
         """
 
-        if not type(seq) == Sequence:
+        if type(seq) != Sequence:
             seq = Sequence(seq, const.NATYPES[self.nnet.natypes[0]])
         seq.assert_ab()
 
         ntype = type(None)
-        if ntype == type(h) or ntype == type(s) or ntype == type(tm):
+        if ntype in [type(h), type(s), type(tm)]:
             name, g, h, s, tm, text = self.__calculate_standard(seq, True)
 
-        curve = np.array(self.__run_melting_curve(seq, h, s, tm, correctIons))
-
-        return curve
+        return np.array(self.__run_melting_curve(seq, h, s, tm, correctIons))
 
     def __dissoc_fraction(self, t, h, s, gplus):
         """Calculate duplex dissociated fraction at given temperature.
