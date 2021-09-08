@@ -323,7 +323,7 @@ def run(args: argparse.Namespace) -> None:
 
     if os.path.isfile(args.input):
         args.IH = open(args.input, "r")
-        if 1 == args.t:
+        if args.t == 1:
             run_single_thread(args, NATYPE, melter)
         else:
             run_parallel(args, NATYPE, melter)

@@ -17,10 +17,7 @@ class Sequence(object):
         self.__len = len(self.__text)
         self.__natype = t
         self.__ab = AB_NA[t]
-        if name is None:
-            self.__name = "%d-mer" % self.__len
-        else:
-            self.__name = name
+        self.__name = "%d-mer" % self.__len if name is None else name
 
     @property
     def text(self):
@@ -39,7 +36,7 @@ class Sequence(object):
     @property
     def fgc(self):
         if self.__fgc is None:
-            if 0 != self.__len:
+            if self.__len != 0:
                 self.__fgc = self.__text.count("G")
                 self.__fgc += self.__text.count("C")
                 self.__fgc /= self.__len
@@ -60,7 +57,9 @@ class Sequence(object):
         return self.__name
 
     def __eq__(self, other):
-        if not all([attrname in dir(other) for attrname in ["text", "name", "natype"]]):
+        if any(
+            attrname not in dir(other) for attrname in ["text", "name", "natype"]
+        ):
             return False
         if not self.text == other.text:
             return False
@@ -111,10 +110,8 @@ class Sequence(object):
             assert c in ab, assert_msg
 
         r = na[::-1]
-        rc = []
-        for c in r:
-            rc.append(rab[ab.index(c)])
-        rc = "".join([str(c) for c in rc]).upper()
+        rc = [rab[ab.index(c)] for c in r]
+        rc = "".join(str(c) for c in rc).upper()
 
         return rc
 
