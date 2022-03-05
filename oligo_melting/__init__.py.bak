@@ -3,7 +3,8 @@
 @contact: gigi.ga90@gmail.com
 """
 
-from oligo_melting import nearest_neighbor
+from oligo_melting import asserts, const
+from oligo_melting import entab, melt, sequence
 
 from importlib.metadata import version, PackageNotFoundError
 
@@ -12,4 +13,4 @@ try:
 except PackageNotFoundError:
     pass
 
-__all__ = ["nearest_neighbor"]
+__all__ = ["asserts", "const", "entab", "melt", "sequence"]
