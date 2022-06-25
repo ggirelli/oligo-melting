@@ -10,12 +10,12 @@ class AlphabetBase:
     __letters: Any
 
     def __init__(self, letters: str):
-        if 0 == len(letters):
+        if not letters:
             raise AssertionError("cannot build an empty alphabet")
         self.__letters = letters
 
     def __iter__(self) -> Iterator[str]:
-        return (x for x in self.__letters)
+        return iter(self.__letters)
 
 
 class AlphabetBytes(AlphabetBase):
